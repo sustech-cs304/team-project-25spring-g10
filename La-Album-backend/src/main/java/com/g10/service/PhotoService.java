@@ -1,0 +1,36 @@
+package com.g10.service;
+
+import com.g10.model.Photo;
+import com.g10.repository.PhotoRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class PhotoService {
+
+    @Autowired
+    private PhotoRepository photoRepository;
+
+    // 获取所有照片
+    public List<Photo> getAllPhotos() {
+        return photoRepository.findAll();
+    }
+
+    // 通过 ID 获取单张照片
+    public Optional<Photo> getPhotoById(Long id) {
+        return photoRepository.findById(id);
+    }
+
+    // 保存（上传）照片
+    public Photo savePhoto(Photo photo) {
+        return photoRepository.save(photo);
+    }
+
+    // 删除照片
+    public void deletePhoto(Long id) {
+        photoRepository.deleteById(id);
+    }
+}
