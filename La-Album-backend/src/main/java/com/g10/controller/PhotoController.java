@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/photos")
+@RequestMapping("/api/photo")
 @CrossOrigin(origins = "*") // 允许跨域请求
 public class PhotoController {
 
