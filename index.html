@@ -1,0 +1,2945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>相册应用设计预览</title>
+    <style>
+        /* 基础样式变量定义 */
+        :root {
+            /* 主色调 */
+            --primary-color: #4F6BF2;
+            --primary-light: #E9EDFD;
+            --primary-dark: #3A50B9;
+            
+            /* 中性色调 */
+            --neutral-100: #FFFFFF;
+            --neutral-200: #F5F7FA;
+            --neutral-300: #E4E9F0;
+            --neutral-400: #D1D9E6;
+            --neutral-500: #A0ADC1;
+            --neutral-600: #7A8CA7;
+            --neutral-700: #566882;
+            --neutral-800: #2E3A4E;
+            --neutral-900: #1A2233;
+            
+            /* 功能色 */
+            --success: #34D399;
+            --warning: #FBBF24;
+            --error: #F87171;
+            --info: #60A5FA;
+            
+            /* 字体 */
+            --font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            
+            /* 间距 */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --space-xxl: 48px;
+            
+            /* 圆角 */
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            
+            /* 阴影 */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* 全局基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-family);
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--neutral-800);
+            background-color: var(--neutral-200);
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            line-height: 1.25;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: var(--space-xl);
+        }
+        
+        h2 {
+            font-size: 2rem;
+            margin-bottom: var(--space-lg);
+        }
+        
+        h3 {
+            font-size: 1.5rem;
+            margin-bottom: var(--space-md);
+        }
+        
+        p {
+            margin-bottom: var(--space-md);
+        }
+        
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        a:hover {
+            color: var(--primary-dark);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--space-md);
+        }
+        
+        .section {
+            margin: var(--space-xxl) 0;
+            padding: var(--space-xl);
+            background-color: var(--neutral-100);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .section-title {
+            color: var(--neutral-900);
+            margin-bottom: var(--space-xl);
+            padding-bottom: var(--space-sm);
+            border-bottom: 2px solid var(--primary-light);
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-sm) var(--space-md);
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background-color: var(--neutral-300);
+            color: var(--neutral-800);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--neutral-400);
+        }
+
+        /* 导航栏样式 */
+        .header {
+            background-color: var(--neutral-100);
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-md) 0;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--neutral-900);
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background-color: var(--primary-color);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: var(--space-lg);
+            list-style: none;
+        }
+        
+        .nav-link {
+            font-weight: 500;
+            color: var(--neutral-700);
+            transition: color 0.2s;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary-color);
+        }
+        
+        .nav-link.active {
+            color: var(--primary-color);
+        }
+        
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary-color);
+            border-radius: 1px;
+        }
+        
+        .user-area {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+        
+        .search-bar {
+            position: relative;
+        }
+        
+        .search-input {
+            padding: var(--space-sm) var(--space-md);
+            padding-left: 36px;
+            border: 1px solid var(--neutral-300);
+            border-radius: var(--radius-md);
+            background-color: var(--neutral-200);
+            transition: all 0.2s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: var(--neutral-100);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--neutral-500);
+        }
+        
+        .user-profile {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-color);
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        /* 横幅区域样式 */
+        .banner {
+            background-color: var(--primary-color);
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--space-xxl) 0;
+            margin-bottom: var(--space-xxl);
+        }
+        
+        .banner-content {
+            max-width: 700px;
+        }
+        
+        .banner h1 {
+            font-size: 3rem;
+            margin-bottom: var(--space-md);
+        }
+        
+        .banner p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: var(--space-lg);
+        }
+        
+        .banner-actions {
+            display: flex;
+            gap: var(--space-md);
+        }
+        
+        /* 移动端响应式设计 */
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                gap: var(--space-md);
+            }
+            
+            .nav-links {
+                gap: var(--space-md);
+                width: 100%;
+                justify-content: space-between;
+                padding: var(--space-md) 0;
+                border-top: 1px solid var(--neutral-300);
+                border-bottom: 1px solid var(--neutral-300);
+            }
+            
+            .user-area {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .search-bar {
+                width: 100%;
+            }
+            
+            .search-input {
+                width: 100%;
+            }
+            
+            .banner h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        /* 相册集概览页面样式 */
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-xl);
+            flex-wrap: wrap;
+            gap: var(--space-md);
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: var(--space-sm);
+            overflow-x: auto;
+            padding-bottom: var(--space-sm);
+        }
+        
+        .filter-tab {
+            padding: var(--space-sm) var(--space-md);
+            background: none;
+            border: none;
+            color: var(--neutral-700);
+            cursor: pointer;
+            font-weight: 500;
+            border-radius: var(--radius-md);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .filter-tab.active {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+        }
+        
+        .filter-tab:hover:not(.active) {
+            background-color: var(--neutral-300);
+        }
+        
+        .filter-actions {
+            display: flex;
+            gap: var(--space-sm);
+            align-items: center;
+        }
+        
+        .dropdown {
+            position: relative;
+        }
+        
+        .dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+        
+        /* 相册网格布局 */
+        .album-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .album-card {
+            background-color: var(--neutral-100);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .album-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .album-cover {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .album-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        
+        .album-card:hover .album-cover img {
+            transform: scale(1.05);
+        }
+        
+        .album-badge {
+            position: absolute;
+            top: var(--space-md);
+            right: var(--space-md);
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-md);
+            font-size: 0.8rem;
+            backdrop-filter: blur(4px);
+        }
+        
+        .album-content {
+            padding: var(--space-md);
+        }
+        
+        .album-title {
+            margin-bottom: var(--space-xs);
+            color: var(--neutral-900);
+        }
+        
+        .album-description {
+            color: var(--neutral-600);
+            font-size: 0.9rem;
+            margin-bottom: var(--space-sm);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.7rem;
+        }
+        
+        .album-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--neutral-500);
+            font-size: 0.8rem;
+        }
+        
+        .album-actions {
+            display: flex;
+            gap: var(--space-xs);
+        }
+        
+        .album-action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--neutral-300);
+            background: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--neutral-600);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .album-action-btn:hover, .album-action-btn.active {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            border-color: var(--primary-light);
+        }
+        
+        /* 分页控件 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: var(--space-xs);
+            margin: var(--space-xxl) 0;
+        }
+        
+        .pagination-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--neutral-300);
+            background: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--neutral-700);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pagination-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .pagination-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .pagination-dots {
+            width: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--neutral-600);
+        }
+        
+        /* 响应式设计 - 相册集概览页面 */
+        @media (max-width: 768px) {
+            .filter-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .filter-tabs {
+                width: 100%;
+                margin-bottom: var(--space-sm);
+            }
+            
+            .filter-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .album-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+
+        /* 第3段：单个相册详情页面样式 */
+        .album-header {
+            background-color: var(--neutral-100);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            margin-bottom: var(--space-xl);
+            box-shadow: var(--shadow-md);
+        }
+
+        .album-header-content {
+            display: flex;
+            gap: var(--space-xl);
+            align-items: flex-start;
+        }
+
+        .album-thumbnail {
+            width: 180px;
+            height: 180px;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            flex-shrink: 0;
+        }
+
+        .album-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .album-info {
+            flex: 1;
+        }
+
+        .album-stats {
+            display: flex;
+            gap: var(--space-lg);
+            margin-top: var(--space-md);
+            color: var(--neutral-600);
+        }
+
+        .album-stat {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .album-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--neutral-100);
+            padding: var(--space-md) var(--space-xl);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-xl);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .album-tools {
+            display: flex;
+            gap: var(--space-sm);
+        }
+
+        .album-view-options {
+            display: flex;
+            gap: var(--space-xs);
+            background-color: var(--neutral-200);
+            border-radius: var(--radius-md);
+            padding: 4px;
+        }
+
+        .view-option {
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            background: none;
+            border: none;
+            color: var(--neutral-700);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .view-option.active {
+            background-color: var(--neutral-100);
+            color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* 照片网格 */
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: var(--space-md);
+            margin-bottom: var(--space-xxl);
+        }
+
+        .photo-card {
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 1;
+            background-color: var(--neutral-300);
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .photo-card:hover {
+            transform: scale(1.02);
+            box-shadow: var(--shadow-md);
+            z-index: 1;
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.5s;
+        }
+
+        .photo-card:hover img {
+            filter: brightness(1.05);
+        }
+
+        .photo-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            padding: var(--space-md);
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .photo-card:hover .photo-overlay {
+            opacity: 1;
+        }
+
+        .photo-title {
+            font-size: 1rem;
+            font-weight: 500;
+            margin: 0;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .photo-actions {
+            display: flex;
+            gap: var(--space-xs);
+        }
+
+        .photo-action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: rgba(255,255,255,0.2);
+            backdrop-filter: blur(4px);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .photo-action-btn:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+
+        .photo-selection {
+            position: absolute;
+            top: var(--space-sm);
+            right: var(--space-sm);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background-color: transparent;
+            opacity: 0;
+            transition: opacity 0.3s, background-color 0.3s;
+        }
+
+        .photo-card:hover .photo-selection {
+            opacity: 0.7;
+        }
+
+        .photo-selection.selected {
+            opacity: 1;
+            background-color: var(--primary-color);
+        }
+
+        .load-more {
+            display: flex;
+            justify-content: center;
+            margin-top: var(--space-xl);
+            margin-bottom: var(--space-xxl);
+        }
+
+        .load-more-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-lg);
+            background-color: var(--neutral-100);
+            color: var(--neutral-800);
+            border: 1px solid var(--neutral-300);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .load-more-btn:hover {
+            background-color: var(--neutral-200);
+        }
+
+        /* 响应式设计 - 相册详情页面 */
+        @media (max-width: 768px) {
+            .album-header-content {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            
+            .album-stats {
+                justify-content: center;
+            }
+            
+            .album-toolbar {
+                flex-direction: column;
+                gap: var(--space-md);
+            }
+            
+            .album-tools, .album-sort {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .photos-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+
+        /* 第4段：照片查看页面 */
+        .photo-viewer {
+            position: relative;
+            height: 800px;
+            margin-top: var(--space-xl);
+            background-color: rgba(0, 0, 0, 0.9);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .photo-close-btn {
+            position: absolute;
+            top: var(--space-md);
+            right: var(--space-md);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s;
+        }
+
+        .photo-close-btn:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            transform: scale(1.1);
+        }
+
+        .photo-view-container {
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photo-view-image {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-xl);
+        }
+
+        .photo-view-image img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .photo-view-sidebar {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 350px;
+            height: 100%;
+            background-color: white;
+            overflow-y: auto;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            z-index: 5;
+        }
+
+        .photo-view-header {
+            padding: var(--space-md);
+            border-bottom: 1px solid var(--neutral-200);
+        }
+
+        .photo-title {
+            font-size: 1.2rem;
+            margin-bottom: var(--space-xs);
+            font-weight: 600;
+            color: var(--neutral-900);
+        }
+
+        .photo-description {
+            color: var(--neutral-600);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .photo-metadata {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+
+        .photo-metadata-item {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--space-xs) 0;
+            border-bottom: 1px dashed var(--neutral-300);
+            font-size: 0.9rem;
+        }
+
+        .metadata-label {
+            color: var(--neutral-600);
+        }
+
+        .metadata-value {
+            color: var(--neutral-800);
+            font-weight: 500;
+        }
+
+        .photo-action-group {
+            display: flex;
+            gap: var(--space-md);
+            flex-wrap: wrap;
+            margin-top: var(--space-lg);
+        }
+
+        .photo-action-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background-color: var(--neutral-200);
+            color: var(--neutral-800);
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .photo-action-button:hover {
+            background-color: var(--neutral-300);
+            transform: translateY(-2px);
+        }
+
+        .photo-action-button.download {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        .photo-action-button.download:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .photo-action-button.delete {
+            background-color: rgba(240, 68, 56, 0.1);
+            color: #f04438;
+        }
+
+        .photo-action-button.delete:hover {
+            background-color: #f04438;
+            color: white;
+        }
+
+        .photo-viewer-controls {
+            position: absolute;
+            bottom: var(--space-xl);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: var(--space-md);
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            padding: var(--space-sm) var(--space-md);
+            border-radius: var(--radius-lg);
+            z-index: 10;
+        }
+
+        .photo-control-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: transparent;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .photo-control-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
+        }
+
+        .photo-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .photo-nav-btn:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .photo-nav-prev {
+            left: var(--space-lg);
+        }
+
+        .photo-nav-next {
+            right: var(--space-lg);
+        }
+
+        .thumbnail-strip {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            display: flex;
+            padding: var(--space-xs);
+            overflow-x: auto;
+            gap: var(--space-xs);
+        }
+
+        .thumbnail-item {
+            height: 100%;
+            aspect-ratio: 1;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            cursor: pointer;
+            opacity: 0.6;
+        }
+
+        .thumbnail-item.active {
+            border-color: var(--primary-color);
+            opacity: 1;
+        }
+
+        .thumbnail-item:hover:not(.active) {
+            opacity: 0.8;
+        }
+
+        .thumbnail-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 响应式设计 - 照片查看页面 */
+        @media (max-width: 768px) {
+            .photo-view-sidebar {
+                position: absolute;
+                right: 0;
+                width: 100%;
+                max-width: 100%;
+                height: 100%;
+                transform: translateX(100%);
+            }
+            
+            .photo-view-sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .photo-nav-btn {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .photo-nav-prev {
+                left: var(--space-xs);
+            }
+            
+            .photo-nav-next {
+                right: var(--space-xs);
+            }
+            
+            .thumbnail-strip {
+                height: 60px;
+            }
+        }
+
+        /* 第5段：上传和编辑功能 */
+        .upload-section {
+            background-color: var(--neutral-100);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-bottom: var(--space-xl);
+        }
+
+        .upload-header {
+            padding: var(--space-lg);
+            border-bottom: 1px solid var(--neutral-300);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .upload-title {
+            font-size: 1.5rem;
+            color: var(--neutral-900);
+            font-weight: 600;
+        }
+
+        .upload-dropzone {
+            padding: var(--space-xxl);
+            background-color: var(--neutral-200);
+            border: 2px dashed var(--neutral-400);
+            border-radius: var(--radius-md);
+            margin: var(--space-lg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-dropzone:hover {
+            background-color: var(--primary-light);
+            border-color: var(--primary-color);
+        }
+
+        .upload-icon {
+            width: 64px;
+            height: 64px;
+            background-color: var(--neutral-100);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--space-md);
+            color: var(--primary-color);
+        }
+
+        .upload-text {
+            margin-bottom: var(--space-md);
+            color: var(--neutral-700);
+        }
+
+        .upload-hint {
+            font-size: 0.9rem;
+            color: var(--neutral-600);
+        }
+
+        .upload-btn {
+            margin-top: var(--space-md);
+        }
+
+        .upload-progress-container {
+            padding: var(--space-lg);
+            border-top: 1px solid var(--neutral-300);
+        }
+
+        .upload-item {
+            display: flex;
+            align-items: center;
+            padding: var(--space-sm);
+            background-color: var(--neutral-200);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-sm);
+        }
+
+        .upload-item-thumbnail {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-right: var(--space-md);
+        }
+
+        .upload-item-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .upload-item-info {
+            flex: 1;
+        }
+
+        .upload-item-name {
+            font-weight: 500;
+            color: var(--neutral-800);
+            margin-bottom: var(--space-xs);
+        }
+
+        .upload-item-size {
+            font-size: 0.8rem;
+            color: var(--neutral-600);
+        }
+
+        .upload-item-progress {
+            width: 100%;
+            height: 4px;
+            background-color: var(--neutral-300);
+            border-radius: 2px;
+            margin-top: var(--space-xs);
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 75%;
+        }
+
+        .upload-item-status {
+            margin-left: var(--space-md);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-uploading {
+            color: var(--primary-color);
+        }
+
+        .status-success {
+            color: var(--success);
+        }
+
+        .upload-item-actions {
+            display: flex;
+            gap: var(--space-xs);
+            margin-left: var(--space-sm);
+        }
+
+        .upload-action-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1px solid var(--neutral-300);
+            background: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--neutral-600);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-action-btn:hover {
+            background-color: var(--neutral-300);
+            color: var(--neutral-900);
+        }
+
+        /* 照片编辑器 */
+        .photo-editor {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--neutral-100);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-bottom: var(--space-xl);
+        }
+
+        .editor-header {
+            padding: var(--space-md) var(--space-lg);
+            border-bottom: 1px solid var(--neutral-300);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-title {
+            font-size: 1.3rem;
+            color: var(--neutral-900);
+            font-weight: 600;
+        }
+
+        .editor-main {
+            display: flex;
+            height: 500px;
+        }
+
+        .editor-preview {
+            flex: 1;
+            background-color: var(--neutral-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-md);
+            overflow: hidden;
+        }
+
+        .editor-preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            box-shadow: var(--shadow-md);
+        }
+
+        .editor-tools {
+            width: 280px;
+            border-left: 1px solid var(--neutral-300);
+            padding: var(--space-md);
+            overflow-y: auto;
+        }
+
+        .tool-section {
+            margin-bottom: var(--space-md);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--neutral-300);
+        }
+
+        .tool-section-title {
+            font-size: 1rem;
+            color: var(--neutral-900);
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+        }
+
+        .tool-group {
+            margin-bottom: var(--space-sm);
+        }
+
+        .tool-label {
+            font-size: 0.8rem;
+            color: var(--neutral-600);
+            margin-bottom: var(--space-xs);
+            display: block;
+        }
+
+        .tool-slider {
+            width: 100%;
+            margin-bottom: var(--space-sm);
+        }
+
+        .filter-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-sm);
+        }
+
+        .filter-option {
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 1;
+        }
+
+        .filter-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .filter-option.active {
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        .filter-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: var(--space-xs);
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .crop-options {
+            display: flex;
+            gap: var(--space-sm);
+            margin-top: var(--space-sm);
+            flex-wrap: wrap;
+        }
+
+        .crop-option {
+            padding: var(--space-xs) var(--space-sm);
+            background-color: var(--neutral-200);
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            color: var(--neutral-700);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .crop-option:hover {
+            background-color: var(--neutral-300);
+        }
+
+        .crop-option.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .editor-footer {
+            padding: var(--space-md) var(--space-lg);
+            border-top: 1px solid var(--neutral-300);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--space-sm);
+        }
+
+        /* 响应式设计 - 上传和编辑功能 */
+        @media (max-width: 768px) {
+            .editor-main {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .editor-preview {
+                height: 300px;
+            }
+            
+            .editor-tools {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid var(--neutral-300);
+            }
+            
+            .filter-options {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* 第6段：用户界面和设置 */
+        .user-profile {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--neutral-100);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-bottom: var(--space-xl);
+        }
+
+        .user-header {
+            position: relative;
+            height: 200px;
+            background: linear-gradient(120deg, var(--primary-color), var(--primary-dark));
+        }
+
+        .user-header-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .user-avatar-container {
+            position: absolute;
+            bottom: -50px;
+            left: var(--space-xl);
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .user-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid white;
+            background-color: var(--neutral-200);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-edit-avatar {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            border: 3px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .user-edit-avatar:hover {
+            background-color: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .user-details {
+            padding: var(--space-lg);
+            padding-top: 60px;
+        }
+
+        .user-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--neutral-900);
+            margin-bottom: var(--space-xs);
+        }
+
+        .user-bio {
+            color: var(--neutral-600);
+            margin-bottom: var(--space-md);
+            line-height: 1.6;
+        }
+
+        .user-stats {
+            display: flex;
+            gap: var(--space-xl);
+            margin: var(--space-md) 0;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--neutral-600);
+        }
+
+        .user-actions {
+            display: flex;
+            gap: var(--space-sm);
+        }
+
+        /* 设置页面 */
+        .settings-container {
+            display: flex;
+            background-color: var(--neutral-100);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-bottom: var(--space-xl);
+        }
+
+        .settings-sidebar {
+            width: 250px;
+            background-color: var(--neutral-200);
+            padding: var(--space-lg);
+            border-right: 1px solid var(--neutral-300);
+        }
+
+        .settings-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .settings-nav-item {
+            margin-bottom: var(--space-xs);
+        }
+
+        .settings-nav-link {
+            display: flex;
+            align-items: center;
+            padding: var(--space-sm) var(--space-md);
+            color: var(--neutral-700);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .settings-nav-link:hover {
+            background-color: var(--neutral-300);
+            color: var(--neutral-900);
+        }
+
+        .settings-nav-link.active {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .settings-nav-icon {
+            margin-right: var(--space-sm);
+        }
+
+        .settings-content {
+            flex: 1;
+            padding: var(--space-lg);
+        }
+
+        .settings-section {
+            margin-bottom: var(--space-xl);
+        }
+
+        .settings-section-title {
+            font-size: 1.3rem;
+            color: var(--neutral-900);
+            font-weight: 600;
+            margin-bottom: var(--space-md);
+            padding-bottom: var(--space-sm);
+            border-bottom: 1px solid var(--neutral-300);
+        }
+
+        .settings-form-group {
+            margin-bottom: var(--space-md);
+        }
+
+        .settings-label {
+            display: block;
+            font-weight: 500;
+            color: var(--neutral-800);
+            margin-bottom: var(--space-xs);
+        }
+
+        .settings-input {
+            width: 100%;
+            padding: var(--space-sm);
+            border: 1px solid var(--neutral-300);
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .settings-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px var(--primary-light);
+            outline: none;
+        }
+
+        .settings-description {
+            font-size: 0.9rem;
+            color: var(--neutral-600);
+            margin-top: var(--space-xs);
+        }
+
+        .settings-toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--space-md);
+        }
+
+        .toggle-label {
+            margin-left: var(--space-sm);
+            font-weight: 500;
+            color: var(--neutral-800);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--neutral-400);
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* 深色模式 */
+        .dark-mode {
+            --neutral-100: #1a1a1a;
+            --neutral-200: #2a2a2a;
+            --neutral-300: #3a3a3a;
+            --neutral-400: #4a4a4a;
+            --neutral-500: #5a5a5a;
+            --neutral-600: #8a8a8a;
+            --neutral-700: #aaaaaa;
+            --neutral-800: #d0d0d0;
+            --neutral-900: #f0f0f0;
+            
+            --primary-light: rgba(58, 130, 246, 0.15);
+            
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.6);
+            
+            --body-bg: #121212;
+            --body-color: #f0f0f0;
+        }
+
+        /* 响应式设计 - 用户和设置界面 */
+        @media (max-width: 768px) {
+            .user-avatar-container {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            .user-details {
+                text-align: center;
+                padding-top: 70px;
+            }
+            
+            .user-stats {
+                justify-content: center;
+            }
+            
+            .user-actions {
+                justify-content: center;
+            }
+            
+            .settings-container {
+                flex-direction: column;
+            }
+            
+            .settings-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--neutral-300);
+            }
+            
+            .settings-nav {
+                display: flex;
+                overflow-x: auto;
+                padding-bottom: var(--space-sm);
+                gap: var(--space-xs);
+            }
+            
+            .settings-nav-item {
+                margin-bottom: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 设计预览部分 -->
+    <div class="design-preview">
+        <h2 class="section-title" style="text-align: center; margin-top: var(--space-xl);">第1段：基础样式和导航设计</h2>
+        
+        <!-- 导航栏部分 -->
+        <header class="header">
+            <div class="container">
+                <nav class="navbar">
+                    <div class="logo">
+                        <div class="logo-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                        </div>
+                        <span>La Album</span>
+                    </div>
+                    
+                    <ul class="nav-links">
+                        <li><a href="#" class="nav-link active">首页</a></li>
+                        <li><a href="#" class="nav-link">相册</a></li>
+                        <li><a href="#" class="nav-link">发现</a></li>
+                        <li><a href="#" class="nav-link">关于</a></li>
+                    </ul>
+                    
+                    <div class="user-area">
+                        <div class="search-bar">
+                            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="search" class="search-input" placeholder="搜索相册和照片...">
+                        </div>
+                        
+                        <div class="user-profile">
+                            <span>YL</span>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </header>
+        
+        <!-- 横幅区域 -->
+        <section class="banner">
+            <div class="container">
+                <div class="banner-content">
+                    <h1>记录美好瞬间</h1>
+                    <p>La Album 为您提供简洁优雅的照片管理体验，让每一张照片都成为永恒的回忆。</p>
+                    <div class="banner-actions">
+                        <button class="btn">创建相册</button>
+                        <button class="btn btn-secondary">了解更多</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 分隔线 -->
+        <div style="height: 2px; background-color: var(--neutral-300); margin: var(--space-xxl) 0;"></div>
+        
+        <!-- 第2段：相册集概览页面 -->
+        <h2 class="section-title" style="text-align: center; margin-top: var(--space-xxl);">第2段：相册集概览页面</h2>
+        
+        <!-- 分类和筛选控件 -->
+        <div class="container">
+            <div class="filter-container">
+                <div class="filter-tabs">
+                    <button class="filter-tab active">全部相册</button>
+                    <button class="filter-tab">最近更新</button>
+                    <button class="filter-tab">我的收藏</button>
+                    <button class="filter-tab">已分享</button>
+                </div>
+                
+                <div class="filter-actions">
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle">
+                            <span>排序方式</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <button class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        创建相册
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 相册网格布局 -->
+            <div class="album-grid">
+                <!-- 相册卡片 1 -->
+                <div class="album-card">
+                    <div class="album-cover">
+                        <img src="https://images.unsplash.com/photo-1518098268026-4e89f1a2cd8e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="旅行相册封面">
+                        <div class="album-badge">24 张照片</div>
+                    </div>
+                    <div class="album-content">
+                        <h3 class="album-title">夏日旅行</h3>
+                        <p class="album-description">2023年夏威夷度假照片精选集</p>
+                        <div class="album-meta">
+                            <span class="album-date">2023年8月12日</span>
+                            <div class="album-actions">
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                    </svg>
+                                </button>
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="18" cy="5" r="3"></circle>
+                                        <circle cx="6" cy="12" r="3"></circle>
+                                        <circle cx="18" cy="19" r="3"></circle>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 相册卡片 2 -->
+                <div class="album-card">
+                    <div class="album-cover">
+                        <img src="https://images.unsplash.com/photo-1533090161767-e6ffed986c88?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="家居相册封面">
+                        <div class="album-badge">18 张照片</div>
+                    </div>
+                    <div class="album-content">
+                        <h3 class="album-title">家居生活</h3>
+                        <p class="album-description">新家装修和日常生活记录</p>
+                        <div class="album-meta">
+                            <span class="album-date">2023年6月3日</span>
+                            <div class="album-actions">
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                    </svg>
+                                </button>
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="18" cy="5" r="3"></circle>
+                                        <circle cx="6" cy="12" r="3"></circle>
+                                        <circle cx="18" cy="19" r="3"></circle>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 相册卡片 3 -->
+                <div class="album-card">
+                    <div class="album-cover">
+                        <img src="https://images.unsplash.com/photo-1461696114087-397271a7aedc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="美食相册封面">
+                        <div class="album-badge">32 张照片</div>
+                    </div>
+                    <div class="album-content">
+                        <h3 class="album-title">美食记录</h3>
+                        <p class="album-description">各地美食探店和家庭烹饪作品</p>
+                        <div class="album-meta">
+                            <span class="album-date">2023年4月18日</span>
+                            <div class="album-actions">
+                                <button class="album-action-btn active">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                    </svg>
+                                </button>
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="18" cy="5" r="3"></circle>
+                                        <circle cx="6" cy="12" r="3"></circle>
+                                        <circle cx="18" cy="19" r="3"></circle>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 相册卡片 4 -->
+                <div class="album-card">
+                    <div class="album-cover">
+                        <img src="https://images.unsplash.com/photo-1491438590914-bc09fcaaf77a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="聚会相册封面">
+                        <div class="album-badge">46 张照片</div>
+                    </div>
+                    <div class="album-content">
+                        <h3 class="album-title">朋友聚会</h3>
+                        <p class="album-description">2023年各种朋友聚会和活动照片</p>
+                        <div class="album-meta">
+                            <span class="album-date">2023年3月5日</span>
+                            <div class="album-actions">
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                    </svg>
+                                </button>
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="18" cy="5" r="3"></circle>
+                                        <circle cx="6" cy="12" r="3"></circle>
+                                        <circle cx="18" cy="19" r="3"></circle>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 相册卡片 5 -->
+                <div class="album-card">
+                    <div class="album-cover">
+                        <img src="https://images.unsplash.com/photo-1490731400467-37929e2a981a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="自然相册封面">
+                        <div class="album-badge">29 张照片</div>
+                    </div>
+                    <div class="album-content">
+                        <h3 class="album-title">自然风光</h3>
+                        <p class="album-description">各地旅行中拍摄的自然风景</p>
+                        <div class="album-meta">
+                            <span class="album-date">2023年2月15日</span>
+                            <div class="album-actions">
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                    </svg>
+                                </button>
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="18" cy="5" r="3"></circle>
+                                        <circle cx="6" cy="12" r="3"></circle>
+                                        <circle cx="18" cy="19" r="3"></circle>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 相册卡片 6 -->
+                <div class="album-card">
+                    <div class="album-cover">
+                        <img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="建筑相册封面">
+                        <div class="album-badge">15 张照片</div>
+                    </div>
+                    <div class="album-content">
+                        <h3 class="album-title">城市建筑</h3>
+                        <p class="album-description">现代与古典建筑的形状与线条</p>
+                        <div class="album-meta">
+                            <span class="album-date">2023年1月8日</span>
+                            <div class="album-actions">
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                    </svg>
+                                </button>
+                                <button class="album-action-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="18" cy="5" r="3"></circle>
+                                        <circle cx="6" cy="12" r="3"></circle>
+                                        <circle cx="18" cy="19" r="3"></circle>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 分页控件 -->
+            <div class="pagination">
+                <button class="pagination-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <button class="pagination-btn active">1</button>
+                <button class="pagination-btn">2</button>
+                <button class="pagination-btn">3</button>
+                <span class="pagination-dots">...</span>
+                <button class="pagination-btn">12</button>
+                <button class="pagination-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 分隔线 -->
+        <div style="height: 2px; background-color: var(--neutral-300); margin: var(--space-xxl) 0;"></div>
+        
+        <!-- 第3段：单个相册详情页面 -->
+        <h2 class="section-title" style="text-align: center; margin-top: var(--space-xxl);">第3段：单个相册详情页面</h2>
+        
+        <div class="container">
+            <!-- 相册头部信息区 -->
+            <div class="album-header">
+                <div class="album-header-content">
+                    <div class="album-thumbnail">
+                        <img src="https://images.unsplash.com/photo-1518098268026-4e89f1a2cd8e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="夏日旅行">
+                    </div>
+                    <div class="album-info">
+                        <h1>夏日旅行</h1>
+                        <p>2023年夏威夷度假照片精选集，记录了我们在茂宜岛和欧胡岛的难忘时光，包含海滩、日落、徒步和当地美食的精彩瞬间。</p>
+                        <div class="album-stats">
+                            <div class="album-stat">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                                <span>24 张照片</span>
+                            </div>
+                            <div class="album-stat">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                <span>2023年8月12日</span>
+                            </div>
+                            <div class="album-stat">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>仅自己可见</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 相册工具栏 -->
+            <div class="album-toolbar">
+                <div class="album-tools">
+                    <button class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        上传照片
+                    </button>
+                    <button class="btn btn-secondary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        </svg>
+                        分享相册
+                    </button>
+                    <button class="btn btn-secondary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                            <polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon>
+                        </svg>
+                        编辑信息
+                    </button>
+                </div>
+                
+                <div class="album-sort">
+                    <div class="album-view-options">
+                        <button class="view-option active">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                        </button>
+                        <button class="view-option">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 照片网格展示区域 -->
+            <div class="photos-grid">
+                <!-- 照片1 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="海滩日落">
+                    <div class="photo-overlay">
+                        <h3 class="photo-title">海滩日落</h3>
+                        <div class="photo-actions">
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </button>
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="photo-selection"></div>
+                </div>
+                
+                <!-- 照片2 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1519046904884-53103b34b206?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="海滩冲浪">
+                    <div class="photo-overlay">
+                        <h3 class="photo-title">海滩冲浪</h3>
+                        <div class="photo-actions">
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </button>
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="photo-selection"></div>
+                </div>
+                
+                <!-- 照片3 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="棕榈树">
+                    <div class="photo-overlay">
+                        <h3 class="photo-title">棕榈树</h3>
+                        <div class="photo-actions">
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </button>
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="photo-selection selected"></div>
+                </div>
+                
+                <!-- 照片4 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1501950183564-3c8b840a30f4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="海洋景观">
+                    <div class="photo-overlay">
+                        <h3 class="photo-title">海洋景观</h3>
+                        <div class="photo-actions">
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </button>
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="photo-selection"></div>
+                </div>
+                
+                <!-- 照片5 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1530521954074-e64f6810b32d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="热带水果">
+                    <div class="photo-overlay">
+                        <h3 class="photo-title">热带水果</h3>
+                        <div class="photo-actions">
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </button>
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="photo-selection"></div>
+                </div>
+                
+                <!-- 照片6 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1471922694854-ff1b63b20054?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="山脉景观">
+                    <div class="photo-overlay">
+                        <h3 class="photo-title">山脉景观</h3>
+                        <div class="photo-actions">
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </button>
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="photo-selection"></div>
+                </div>
+                
+                <!-- 照片7 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1519882189396-71b93cb4e9ad?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="度假村泳池">
+                    <div class="photo-overlay">
+                        <h3 class="photo-title">度假村泳池</h3>
+                        <div class="photo-actions">
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </button>
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="photo-selection"></div>
+                </div>
+                
+                <!-- 照片8 -->
+                <div class="photo-card">
+                    <img src="https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="热带饮品">
+                    <div class="photo-overlay">
+                        <h3 class="photo-title">热带饮品</h3>
+                        <div class="photo-actions">
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </button>
+                            <button class="photo-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="photo-selection selected"></div>
+                </div>
+            </div>
+            
+            <!-- 加载更多按钮 -->
+            <div class="load-more">
+                <button class="load-more-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    加载更多照片
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 照片查看页 -->
+    <div class="design-segment">
+        <hr class="segment-divider">
+        <h2 class="segment-title">第4段：照片查看页面</h2>
+        
+        <div class="photo-viewer">
+            <button class="photo-close-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            
+            <div class="photo-view-container">
+                <button class="photo-nav-btn photo-nav-prev">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                
+                <div class="photo-view-image">
+                    <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="海滩照片">
+                </div>
+                
+                <button class="photo-nav-btn photo-nav-next">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="photo-view-sidebar">
+                <div class="photo-view-header">
+                    <h3 class="photo-title">日落海滩</h3>
+                    <p class="photo-description">暑假第三天傍晚在海边拍摄的日落，非常美丽的色彩和氛围。</p>
+                </div>
+                
+                <div class="photo-metadata">
+                    <div class="photo-metadata-item">
+                        <span class="metadata-label">拍摄时间</span>
+                        <span class="metadata-value">2023年8月14日 18:45</span>
+                    </div>
+                    <div class="photo-metadata-item">
+                        <span class="metadata-label">设备</span>
+                        <span class="metadata-value">iPhone 14 Pro</span>
+                    </div>
+                    <div class="photo-metadata-item">
+                        <span class="metadata-label">尺寸</span>
+                        <span class="metadata-value">4032 x 3024</span>
+                    </div>
+                    <div class="photo-metadata-item">
+                        <span class="metadata-label">文件大小</span>
+                        <span class="metadata-value">2.4 MB</span>
+                    </div>
+                    <div class="photo-metadata-item">
+                        <span class="metadata-label">所属相册</span>
+                        <span class="metadata-value">夏日旅行</span>
+                    </div>
+                </div>
+                
+                <div class="photo-action-group">
+                    <button class="photo-action-button download">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        下载
+                    </button>
+                    <button class="photo-action-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        </svg>
+                        分享
+                    </button>
+                    <button class="photo-action-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                        编辑
+                    </button>
+                    <button class="photo-action-button delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        删除
+                    </button>
+                </div>
+            </div>
+            
+            <div class="photo-viewer-controls">
+                <button class="photo-control-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                </button>
+                <button class="photo-control-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                    </svg>
+                </button>
+                <button class="photo-control-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                </button>
+                <button class="photo-control-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <polyline points="9 21 3 21 3 15"></polyline>
+                        <line x1="21" y1="3" x2="14" y2="10"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="thumbnail-strip">
+                <div class="thumbnail-item active">
+                    <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="缩略图1">
+                </div>
+                <div class="thumbnail-item">
+                    <img src="https://images.unsplash.com/photo-1540979388789-6cee28a1cdc9?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="缩略图2">
+                </div>
+                <div class="thumbnail-item">
+                    <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="缩略图3">
+                </div>
+                <div class="thumbnail-item">
+                    <img src="https://images.unsplash.com/photo-1519046904884-53103b34b206?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="缩略图4">
+                </div>
+                <div class="thumbnail-item">
+                    <img src="https://images.unsplash.com/photo-1509233725247-49e657c54213?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="缩略图5">
+                </div>
+                <div class="thumbnail-item">
+                    <img src="https://images.unsplash.com/photo-1473186578172-c141e6798cf4?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="缩略图6">
+                </div>
+                <div class="thumbnail-item">
+                    <img src="https://images.unsplash.com/photo-1484821582734-6692f7b94bf4?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="缩略图7">
+                </div>
+                <div class="thumbnail-item">
+                    <img src="https://images.unsplash.com/photo-1536759808958-1a71d944d04e?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="缩略图8">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 第5段：上传和编辑功能 -->
+    <div class="design-segment">
+        <hr class="segment-divider" style="height: 2px; background-color: var(--neutral-300); margin: var(--space-xxl) 0;">
+        <h2 class="segment-title" style="text-align: center; margin-top: var(--space-xxl);">第5段：上传和编辑功能</h2>
+        
+        <div class="container">
+            <!-- 上传照片部分 -->
+            <div class="upload-section">
+                <div class="upload-header">
+                    <h3 class="upload-title">上传照片</h3>
+                    <button class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        选择文件
+                    </button>
+                </div>
+                <div class="upload-dropzone">
+                    <div class="upload-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <p class="upload-text">将照片拖放到这里或点击上传</p>
+                    <p class="upload-hint">支持的文件格式：JPG, PNG, GIF (最大20MB)</p>
+                </div>
+                
+                <div class="upload-progress-container">
+                    <!-- 上传项目1 -->
+                    <div class="upload-item">
+                        <div class="upload-item-thumbnail">
+                            <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="上传预览">
+                        </div>
+                        <div class="upload-item-info">
+                            <div class="upload-item-name">sunset-beach.jpg</div>
+                            <div class="upload-item-size">2.4 MB</div>
+                            <div class="upload-item-progress">
+                                <div class="progress-bar" style="width: 75%;"></div>
+                            </div>
+                        </div>
+                        <div class="upload-item-status status-uploading">上传中 75%</div>
+                        <div class="upload-item-actions">
+                            <button class="upload-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 上传项目2 -->
+                    <div class="upload-item">
+                        <div class="upload-item-thumbnail">
+                            <img src="https://images.unsplash.com/photo-1519046904884-53103b34b206?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="上传预览">
+                        </div>
+                        <div class="upload-item-info">
+                            <div class="upload-item-name">ocean-view.jpg</div>
+                            <div class="upload-item-size">1.8 MB</div>
+                            <div class="upload-item-progress">
+                                <div class="progress-bar" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div class="upload-item-status status-success">上传完成</div>
+                        <div class="upload-item-actions">
+                            <button class="upload-action-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 照片编辑器 -->
+            <div class="photo-editor">
+                <div class="editor-header">
+                    <h3 class="editor-title">编辑照片</h3>
+                    <div>
+                        <button class="btn btn-secondary">取消</button>
+                        <button class="btn" style="margin-left: 8px;">保存</button>
+                    </div>
+                </div>
+                
+                <div class="editor-main">
+                    <div class="editor-preview">
+                        <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="编辑预览" class="editor-preview-image">
+                    </div>
+                    
+                    <div class="editor-tools">
+                        <div class="tool-section">
+                            <h4 class="tool-section-title">基本调整</h4>
+                            
+                            <div class="tool-group">
+                                <label class="tool-label">亮度</label>
+                                <input type="range" class="tool-slider" min="0" max="100" value="50">
+                            </div>
+                            
+                            <div class="tool-group">
+                                <label class="tool-label">对比度</label>
+                                <input type="range" class="tool-slider" min="0" max="100" value="50">
+                            </div>
+                            
+                            <div class="tool-group">
+                                <label class="tool-label">饱和度</label>
+                                <input type="range" class="tool-slider" min="0" max="100" value="50">
+                            </div>
+                            
+                            <div class="tool-group">
+                                <label class="tool-label">锐度</label>
+                                <input type="range" class="tool-slider" min="0" max="100" value="30">
+                            </div>
+                        </div>
+                        
+                        <div class="tool-section">
+                            <h4 class="tool-section-title">滤镜</h4>
+                            <div class="filter-options">
+                                <div class="filter-option active">
+                                    <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="原始">
+                                    <div class="filter-name">原始</div>
+                                </div>
+                                <div class="filter-option">
+                                    <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80&sat=-100" alt="黑白">
+                                    <div class="filter-name">黑白</div>
+                                </div>
+                                <div class="filter-option">
+                                    <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80&sepia=50" alt="复古">
+                                    <div class="filter-name">复古</div>
+                                </div>
+                                <div class="filter-option">
+                                    <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80&contrast=50" alt="高对比">
+                                    <div class="filter-name">高对比</div>
+                                </div>
+                                <div class="filter-option">
+                                    <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80&sat=50&bright=10" alt="鲜艳">
+                                    <div class="filter-name">鲜艳</div>
+                                </div>
+                                <div class="filter-option">
+                                    <img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80&blur=5" alt="柔焦">
+                                    <div class="filter-name">柔焦</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tool-section">
+                            <h4 class="tool-section-title">裁剪和旋转</h4>
+                            <div class="crop-options">
+                                <button class="crop-option active">原始比例</button>
+                                <button class="crop-option">1:1</button>
+                                <button class="crop-option">4:3</button>
+                                <button class="crop-option">16:9</button>
+                                <button class="crop-option">自由裁剪</button>
+                            </div>
+                            
+                            <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
+                                <button class="btn btn-secondary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 2v12h12"></path>
+                                        <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                                    </svg>
+                                    旋转
+                                </button>
+                                <button class="btn btn-secondary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M7 2v5h5"></path>
+                                        <path d="M2 9V5h5"></path>
+                                        <path d="M17 22v-5h5"></path>
+                                        <path d="M22 15v4h-5"></path>
+                                        <rect x="7" y="7" width="10" height="10"></rect>
+                                    </svg>
+                                    翻转
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 第6段：用户界面和设置 -->
+    <div class="design-segment">
+        <hr class="segment-divider" style="height: 2px; background-color: var(--neutral-300); margin: var(--space-xxl) 0;">
+        <h2 class="segment-title" style="text-align: center; margin-top: var(--space-xxl);">第6段：用户界面和设置</h2>
+        
+        <div class="container">
+            <!-- 用户信息部分 -->
+            <div class="user-profile">
+                <div class="user-header">
+                    <div class="user-header-overlay"></div>
+                    <div class="user-avatar-container">
+                        <div class="user-avatar">
+                            <img src="https://via.placeholder.com/120" alt="用户头像">
+                        </div>
+                        <div class="user-edit-avatar">
+                            <i class="fas fa-pencil-alt"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="user-details">
+                    <h2 class="user-name">用户名</h2>
+                    <p class="user-bio">用户简介</p>
+                    <div class="user-stats">
+                        <div class="stat-item">
+                            <span class="stat-value">100</span>
+                            <span class="stat-label">关注</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">500</span>
+                            <span class="stat-label">粉丝</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">200</span>
+                            <span class="stat-label">帖子</span>
+                        </div>
+                    </div>
+                    <div class="user-actions">
+                        <button class="btn">关注</button>
+                        <button class="btn btn-secondary">私信</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 设置部分 -->
+            <div class="settings-container">
+                <div class="settings-sidebar">
+                    <ul class="settings-nav">
+                        <li class="settings-nav-item">
+                            <a href="#" class="settings-nav-link active">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="settings-nav-icon">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                个人资料
+                            </a>
+                        </li>
+                        <li class="settings-nav-item">
+                            <a href="#" class="settings-nav-link">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="settings-nav-icon">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                </svg>
+                                账号设置
+                            </a>
+                        </li>
+                        <li class="settings-nav-item">
+                            <a href="#" class="settings-nav-link">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="settings-nav-icon">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                                隐私设置
+                            </a>
+                        </li>
+                        <li class="settings-nav-item">
+                            <a href="#" class="settings-nav-link">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="settings-nav-icon">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                帮助与支持
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">个人资料</h3>
+                        <div class="settings-form-group">
+                            <label class="settings-label" for="username">用户名</label>
+                            <input type="text" id="username" class="settings-input" value="小明的相册">
+                            <p class="settings-description">这是您的公开显示名称</p>
+                        </div>
+                        <div class="settings-form-group">
+                            <label class="settings-label" for="bio">个人简介</label>
+                            <textarea id="bio" class="settings-input" rows="4">热爱摄影的旅行爱好者，记录美好生活瞬间。</textarea>
+                            <p class="settings-description">简短介绍一下自己，最多150字</p>
+                        </div>
+                        <div class="settings-form-group">
+                            <label class="settings-label" for="email">电子邮箱</label>
+                            <input type="email" id="email" class="settings-input" value="user@example.com">
+                            <p class="settings-description">用于接收通知和重置密码</p>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">通知设置</h3>
+                        <div class="settings-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">电子邮件通知</span>
+                        </div>
+                        <div class="settings-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">新评论通知</span>
+                        </div>
+                        <div class="settings-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">新关注通知</span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">隐私设置</h3>
+                        <div class="settings-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">公开个人资料</span>
+                        </div>
+                        <div class="settings-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">默认创建私密相册</span>
+                        </div>
+                        <div class="settings-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">照片地理位置信息</span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">界面设置</h3>
+                        <div class="settings-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="dark-mode-toggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">深色模式</span>
+                        </div>
+                        <div class="settings-form-group">
+                            <label class="settings-label" for="language">语言</label>
+                            <select id="language" class="settings-input">
+                                <option value="zh_CN" selected>简体中文</option>
+                                <option value="en_US">English (US)</option>
+                                <option value="ja_JP">日本語</option>
+                                <option value="ko_KR">한국어</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: var(--space-xl); text-align: right;">
+                        <button class="btn btn-secondary" style="margin-right: 8px;">取消</button>
+                        <button class="btn">保存更改</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 深色模式演示 -->
+            <div class="settings-section" style="margin-top: var(--space-xxl);">
+                <h3 class="settings-section-title">深色模式预览</h3>
+                <div class="dark-mode" style="padding: var(--space-lg); border-radius: var(--radius-lg); margin-top: var(--space-md);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md);">
+                        <h4 style="margin: 0; color: var(--neutral-900);">深色模式样例</h4>
+                        <button class="btn" style="background-color: var(--primary-color); color: white;">按钮</button>
+                    </div>
+                    <p style="color: var(--neutral-800);">这是深色模式下的文本显示效果。深色模式可以减少屏幕亮度，保护您的眼睛，特别是在夜间使用时。</p>
+                    <div style="display: flex; gap: var(--space-md); margin-top: var(--space-md);">
+                        <div style="background-color: var(--neutral-200); padding: var(--space-md); border-radius: var(--radius-md); flex: 1;">
+                            <h5 style="margin-top: 0; color: var(--neutral-900);">卡片标题</h5>
+                            <p style="color: var(--neutral-700); font-size: 0.9rem;">深色模式下的卡片内容展示</p>
+                        </div>
+                        <div style="background-color: var(--neutral-200); padding: var(--space-md); border-radius: var(--radius-md); flex: 1;">
+                            <h5 style="margin-top: 0; color: var(--neutral-900);">卡片标题</h5>
+                            <p style="color: var(--neutral-700); font-size: 0.9rem;">深色模式下的卡片内容展示</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 深色模式切换功能
+    document.getElementById('dark-mode-toggle').addEventListener('change', function() {
+        document.body.classList.toggle('dark-mode', this.checked);
+    });
+</script>
+</body>
+</html> 
