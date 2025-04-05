@@ -1,19 +1,600 @@
 <template>
-    <div>
-      <h2>Share Photo</h2>
-      <el-input v-model="shareLink" readonly />
-      <el-button @click="generateShareLink">Generate Share Link</el-button>
+  <div class="share-view">
+    <div class="share-header">
+      <div class="container">
+        <h1>分享照片</h1>
+        <p class="description">创建一个分享链接，以便他人可以查看您的照片。</p>
+      </div>
     </div>
-  </template>
+    
+    <div class="share-content">
+      <div class="container">
+        <div v-if="loading" class="loading-state">
+          <el-skeleton :rows="3" animated />
+        </div>
+        
+        <template v-else>
+          <div class="photo-preview-section">
+            <div class="photo-preview" v-if="photo">
+              <img :src="photo.imageUrl" :alt="photo.title">
+              <div class="photo-info">
+                <h2>{{ photo.title }}</h2>
+                <p>{{ photo.description }}</p>
+              </div>
+            </div>
+            <div class="photo-selection-error" v-else>
+              <div class="error-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <h3>未选择任何照片</h3>
+              <p>请先从相册中选择一张照片进行分享</p>
+              <button class="btn" @click="navigateToAlbums">浏览相册</button>
+            </div>
+          </div>
+          
+          <div class="share-options-section" v-if="photo">
+            <div class="share-options">
+              <h3>分享选项</h3>
+              
+              <div class="option-group">
+                <label>分享有效期</label>
+                <select v-model="shareSettings.expiryDays">
+                  <option value="1">1天</option>
+                  <option value="7">7天</option>
+                  <option value="30">30天</option>
+                  <option value="0">永久有效</option>
+                </select>
+              </div>
+              
+              <div class="option-group">
+                <label>访问权限</label>
+                <div class="radio-group">
+                  <label class="radio-option">
+                    <input type="radio" v-model="shareSettings.accessType" value="public">
+                    <span>公开（任何人都可查看）</span>
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" v-model="shareSettings.accessType" value="restricted">
+                    <span>限制（需要密码访问）</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div class="option-group" v-if="shareSettings.accessType === 'restricted'">
+                <label>访问密码</label>
+                <input type="text" v-model="shareSettings.password" placeholder="设置一个访问密码">
+              </div>
+              
+              <div class="generate-btn-container">
+                <button class="btn btn-primary" @click="generateShareLink" :disabled="isGenerating">
+                  <svg v-if="isGenerating" class="spin-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="2" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="22"></line>
+                    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                    <line x1="2" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="22" y2="12"></line>
+                    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                    <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                  生成分享链接
+                </button>
+              </div>
+            </div>
+            
+            <div class="share-result" v-if="shareLink">
+              <h3>分享链接已生成</h3>
+              
+              <div class="link-container">
+                <input type="text" v-model="shareLink" readonly class="share-link-input">
+                <button class="copy-btn" @click="copyShareLink" :class="{ 'copied': copied }">
+                  <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  {{ copied ? '已复制' : '复制链接' }}
+                </button>
+              </div>
+              
+              <div class="qr-code-container">
+                <div class="qr-code">
+                  <!-- 模拟二维码图像 -->
+                  <div class="mock-qr-code"></div>
+                  <!-- 实际项目中可以使用二维码生成库，如 qrcode.vue -->
+                </div>
+                <button class="btn btn-secondary download-qr-btn">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  下载二维码
+                </button>
+              </div>
+              
+              <div class="share-info">
+                <div class="info-item">
+                  <span class="info-label">有效期至:</span>
+                  <span class="info-value">{{ formatExpiryDate() }}</span>
+                </div>
+                <div class="info-item" v-if="shareSettings.accessType === 'restricted'">
+                  <span class="info-label">访问密码:</span>
+                  <span class="info-value">{{ shareSettings.password }}</span>
+                </div>
+              </div>
+              
+              <div class="share-social">
+                <h4>分享到社交媒体</h4>
+                <div class="social-buttons">
+                  <button class="social-btn wechat">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 12C9 12 9 9 12 9C15 9 15 12 15 12C15 15 12 15 9 15"></path>
+                    </svg>
+                    微信
+                  </button>
+                  <button class="social-btn weibo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                    微博
+                  </button>
+                  <button class="social-btn qq">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="2" y1="12" x2="22" y2="12"></line>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                    QQ
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+
+const router = useRouter();
+const route = useRoute();
+const loading = ref(true);
+const photo = ref(null);
+const shareLink = ref('');
+const copied = ref(false);
+const isGenerating = ref(false);
+
+// 分享设置
+const shareSettings = ref({
+  expiryDays: '7',
+  accessType: 'public',
+  password: ''
+});
+
+// 在组件加载时获取照片
+onMounted(async () => {
+  const photoId = route.query.photoId || route.params.id;
   
-  <script setup>
-  import { ref } from 'vue';
-  import { generatePhotoShareLink } from '@/api/photo';
+  if (photoId) {
+    // 模拟API调用获取照片信息
+    setTimeout(() => {
+      photo.value = {
+        id: photoId,
+        title: '美丽的风景照片',
+        description: '这是一张令人惊叹的风景照片，拍摄于2023年夏天。',
+        imageUrl: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+        albumId: 1,
+        albumName: '旅行相册',
+        createdAt: '2023-07-15T14:30:00Z'
+      };
+      loading.value = false;
+    }, 800);
+  } else {
+    loading.value = false;
+  }
+});
+
+// 格式化有效期日期
+const formatExpiryDate = () => {
+  if (shareSettings.value.expiryDays === '0') {
+    return '永久有效';
+  }
   
-  const shareLink = ref('');
+  const today = new Date();
+  const expiryDate = new Date(today);
+  expiryDate.setDate(today.getDate() + parseInt(shareSettings.value.expiryDays));
   
-  const generateShareLink = async () => {
-    shareLink.value = await generatePhotoShareLink();
-  };
-  </script>
+  return `${expiryDate.getFullYear()}年${expiryDate.getMonth() + 1}月${expiryDate.getDate()}日`;
+};
+
+// 生成分享链接
+const generateShareLink = async () => {
+  if (!photo.value) return;
+  
+  isGenerating.value = true;
+  
+  // 模拟API调用
+  setTimeout(() => {
+    // 创建带有查询参数的链接
+    const baseUrl = window.location.origin;
+    const params = new URLSearchParams();
+    params.append('photoId', photo.value.id);
+    params.append('token', generateRandomToken());
+    
+    if (shareSettings.value.accessType === 'restricted') {
+      params.append('protected', 'true');
+    }
+    
+    shareLink.value = `${baseUrl}/share-view?${params.toString()}`;
+    isGenerating.value = false;
+  }, 1500);
+};
+
+// 生成随机令牌
+const generateRandomToken = () => {
+  return Math.random().toString(36).substr(2, 10);
+};
+
+// 复制分享链接
+const copyShareLink = () => {
+  navigator.clipboard.writeText(shareLink.value).then(() => {
+    copied.value = true;
+    setTimeout(() => {
+      copied.value = false;
+    }, 2000);
+  });
+};
+
+// 导航到相册页面
+const navigateToAlbums = () => {
+  router.push({ name: 'AlbumList' });
+};
+</script>
+
+<style scoped>
+.share-view {
+  min-height: 100vh;
+}
+
+.share-header {
+  background-color: var(--primary-light);
+  padding: var(--space-xl) 0;
+  margin-bottom: var(--space-xl);
+}
+
+.share-header h1 {
+  margin-bottom: var(--space-sm);
+  color: var(--neutral-900);
+}
+
+.description {
+  color: var(--neutral-600);
+  max-width: 600px;
+}
+
+.share-content {
+  padding-bottom: var(--space-xxl);
+}
+
+.loading-state {
+  padding: var(--space-lg);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.photo-preview-section {
+  margin-bottom: var(--space-xl);
+}
+
+.photo-preview {
+  max-width: 800px;
+  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  background-color: var(--neutral-100);
+}
+
+.photo-preview img {
+  width: 100%;
+  height: auto;
+  max-height: 500px;
+  object-fit: cover;
+}
+
+.photo-info {
+  padding: var(--space-lg);
+}
+
+.photo-info h2 {
+  margin-bottom: var(--space-sm);
+  color: var(--neutral-900);
+}
+
+.photo-info p {
+  color: var(--neutral-600);
+}
+
+.photo-selection-error {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+  padding: var(--space-xxl) 0;
+  color: var(--neutral-600);
+}
+
+.error-icon {
+  margin-bottom: var(--space-md);
+  color: var(--neutral-400);
+}
+
+.photo-selection-error h3 {
+  margin-bottom: var(--space-sm);
+  color: var(--neutral-800);
+}
+
+.photo-selection-error p {
+  margin-bottom: var(--space-lg);
+}
+
+.share-options-section {
+  display: flex;
+  gap: var(--space-xl);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.share-options {
+  flex: 1;
+  background-color: var(--neutral-100);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.share-options h3 {
+  margin-bottom: var(--space-lg);
+  color: var(--neutral-900);
+}
+
+.option-group {
+  margin-bottom: var(--space-md);
+}
+
+.option-group label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  color: var(--neutral-700);
+  font-weight: 500;
+}
+
+.option-group select,
+.option-group input[type="text"] {
+  width: 100%;
+  padding: var(--space-sm);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-sm);
+  background-color: white;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+}
+
+.generate-btn-container {
+  margin-top: var(--space-lg);
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-md);
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  justify-content: center;
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.share-result {
+  flex: 1;
+  background-color: var(--neutral-100);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.share-result h3 {
+  margin-bottom: var(--space-lg);
+  color: var(--neutral-900);
+}
+
+.link-container {
+  display: flex;
+  margin-bottom: var(--space-lg);
+}
+
+.share-link-input {
+  flex: 1;
+  padding: var(--space-sm);
+  border: 1px solid var(--neutral-300);
+  border-right: none;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background-color: white;
+}
+
+.copy-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0 var(--space-md);
+  background-color: var(--neutral-200);
+  border: 1px solid var(--neutral-300);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  cursor: pointer;
+}
+
+.copy-btn.copied {
+  background-color: var(--success-light);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.qr-code-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.qr-code {
+  width: 200px;
+  height: 200px;
+  margin-bottom: var(--space-md);
+}
+
+.mock-qr-code {
+  width: 100%;
+  height: 100%;
+  background: repeating-conic-gradient(var(--neutral-900) 0% 25%, white 0% 50%) 50% / 10% 10%;
+  border-radius: var(--radius-sm);
+}
+
+.download-qr-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--neutral-200);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.share-info {
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  background-color: var(--neutral-50);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--primary-color);
+}
+
+.info-item {
+  display: flex;
+  margin-bottom: var(--space-xs);
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  width: 80px;
+  color: var(--neutral-700);
+  font-weight: 500;
+}
+
+.info-value {
+  color: var(--neutral-900);
+}
+
+.share-social h4 {
+  margin-bottom: var(--space-md);
+  color: var(--neutral-800);
+}
+
+.social-buttons {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.social-btn.wechat {
+  background-color: #07C160;
+  color: white;
+}
+
+.social-btn.weibo {
+  background-color: #E6162D;
+  color: white;
+}
+
+.social-btn.qq {
+  background-color: #12B7F5;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .share-options-section {
+    flex-direction: column;
+  }
+  
+  .share-header {
+    padding: var(--space-lg) 0;
+  }
+  
+  .social-buttons {
+    flex-wrap: wrap;
+  }
+  
+  .social-btn {
+    flex: 1;
+    min-width: 100px;
+  }
+}
+</style>
   
