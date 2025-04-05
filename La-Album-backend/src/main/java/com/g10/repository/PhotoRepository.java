@@ -2,6 +2,7 @@ package com.g10.repository;
 
 import com.g10.model.Photo;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

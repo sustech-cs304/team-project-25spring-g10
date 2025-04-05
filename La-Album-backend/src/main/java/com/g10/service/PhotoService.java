@@ -1,5 +1,6 @@
 package com.g10.service;
 
+import com.g10.model.Album;
 import com.g10.model.Photo;
 import com.g10.repository.PhotoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +30,12 @@ public class PhotoService {
         return photoRepository.save(photo);
     }
 
-    // 删除照片
+    // TODO: flip isDeleted, save it to trashBin
     public void deletePhoto(Long id) {
         photoRepository.deleteById(id);
+    }
+
+    //TODO: move to a new album
+    public void movePhoto(Long id, Album dest) {
     }
 }

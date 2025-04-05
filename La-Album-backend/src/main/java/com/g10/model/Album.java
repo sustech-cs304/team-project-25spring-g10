@@ -3,6 +3,8 @@ package com.g10.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -15,5 +17,12 @@ public class Album {
 
     private String name;
     private String description;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @OneToMany(mappedBy = "album", cascade = CascadeType.ALL)
+    private List<Photo> photos;
 }
 

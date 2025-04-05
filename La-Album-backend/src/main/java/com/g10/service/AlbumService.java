@@ -33,6 +33,7 @@ public class AlbumService {
         return null;
     }
 
+    //TODO: 把属于这个album的照片放到trashBin里
     public void deleteAlbum(Long id) {
         albumRepository.deleteById(id);
     }

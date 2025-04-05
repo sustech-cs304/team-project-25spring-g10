@@ -18,11 +18,16 @@ public class Photo {
     private String url;  // 照片存储的 URL
     private String location;  // 拍摄地点
     private String tags;  // 照片标签（逗号分隔）
-
     private LocalDateTime uploadTime;  // 上传时间
+    private boolean isDeleted;
+
+    @ManyToOne
+    @JoinColumn(name = "album_id")
+    private Album album;
 
     @PrePersist
     protected void onCreate() {
         this.uploadTime = LocalDateTime.now(); // 自动设置上传时间
+        this.isDeleted = false;
     }
 }
