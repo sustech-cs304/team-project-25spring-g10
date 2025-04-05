@@ -1,0 +1,180 @@
+/* 导入变量 */
+@import './variables.css';
+
+/* 全局基础样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--neutral-800);
+    background-color: var(--neutral-200);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-xl);
+}
+
+h2 {
+    font-size: 2rem;
+    margin-bottom: var(--space-lg);
+}
+
+h3 {
+    font-size: 1.5rem;
+    margin-bottom: var(--space-md);
+}
+
+p {
+    margin-bottom: var(--space-md);
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: var(--primary-dark);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}
+
+.section {
+    margin: var(--space-xxl) 0;
+    padding: var(--space-xl);
+    background-color: var(--neutral-100);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.section-title {
+    color: var(--neutral-900);
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--primary-light);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-sm) var(--space-md);
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background-color: var(--neutral-300);
+    color: var(--neutral-800);
+}
+
+.btn-secondary:hover {
+    background-color: var(--neutral-400);
+}
+
+/* 工具类 */
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.gap-sm {
+    gap: var(--space-sm);
+}
+
+.gap-md {
+    gap: var(--space-md);
+}
+
+.gap-lg {
+    gap: var(--space-lg);
+}
+
+.w-full {
+    width: 100%;
+}
+
+.relative {
+    position: relative;
+}
+
+.absolute {
+    position: absolute;
+}
+
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+.mt-xl { margin-top: var(--space-xl); }
+
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.mb-xl { margin-bottom: var(--space-xl); }
+
+/* 响应式类 */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 var(--space-sm);
+    }
+    
+    .section {
+        padding: var(--space-lg);
+    }
+}
+
+/* 深色模式适配 */
+.dark-mode body {
+    background-color: var(--body-bg);
+    color: var(--body-color);
+} 
