@@ -11,7 +11,6 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-
 public class TrashBin {
 
     @Id
@@ -22,12 +21,6 @@ public class TrashBin {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ElementCollection
-    @CollectionTable(
-            name = "trash_photos",
-            joinColumns = @JoinColumn(name = "trashbin_id")  // 外键指向TrashBin
-    )
-    private List<TrashedPhoto> trashedPhotos;  // 替换原来的photoIds
-
-    private LocalDateTime deleteTime; //删除时间
+    @OneToMany(mappedBy = "trashBin", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TrashedPhoto> trashedPhotos; // 一对多关联
 }

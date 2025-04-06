@@ -1,44 +1,32 @@
 package com.g10.service;
 
-import com.g10.model.Album;
 import com.g10.model.Photo;
 import com.g10.model.TrashedPhoto;
-import com.g10.repository.AlbumRepository;
+import com.g10.model.TrashBin;
 import com.g10.repository.PhotoRepository;
-import com.g10.repository.TrashBinRepository;
 import com.g10.repository.TrashedPhotoRepository;
+import com.g10.repository.AlbumRepository;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
-public class TrashBinService {
-    @Autowired
-    private TrashBinRepository trashBinRepository;
-    private TrashedPhotoRepository trashedPhotoRepository;
-    private PhotoRepository photoRepository;
-    private AlbumRepository albumRepository;
+@RequiredArgsConstructor
+public class TrashedPhotoService {
 
-    public TrashBinService(PhotoRepository photoRepository) {
+    private final TrashedPhotoRepository trashedPhotoRepository;
+    private final PhotoRepository photoRepository;
+    private final AlbumRepository albumRepository;
+
+    // 移动照片到垃圾桶
+    @Transactional
+    public void moveToTrash(Photo photo, TrashBin trashBin) {
+        TrashedPhoto trash = new TrashedPhoto(photo, trashBin);
+        trashedPhotoRepository.save(trash);
+        photoRepository.delete(photo);
     }
-
-//    //TODO: find photo
-//    public Photo findPhotoById(Long photoId) {
-//        return null;
-//    }
-
-
-    // TODO: check all photos in trashBin, if delete time > 30 days, delete
-    public void automaticDeletePhoto() {
-
-    }
-
-    public void setDeleteDate(Long photoId) {}
-
-
 
     // 还原照片
     @Transactional
@@ -54,8 +42,10 @@ public class TrashBinService {
         photo.setUploadTime(trash.getUploadTime());
         photo.setAlbum(albumRepository.findById(trash.getAlbumId())
                 .orElseThrow(() -> new RuntimeException("Album not found")));
+
         photoRepository.save(photo);
         trashedPhotoRepository.delete(trash);
+
         return photo;
     }
 

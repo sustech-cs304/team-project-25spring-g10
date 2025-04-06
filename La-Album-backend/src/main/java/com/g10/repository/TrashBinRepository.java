@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
-
 public interface TrashBinRepository extends JpaRepository<TrashBin, Long> {
 
 }

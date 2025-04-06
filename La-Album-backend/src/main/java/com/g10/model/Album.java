@@ -22,6 +22,7 @@ public class Album {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Getter
     @OneToMany(mappedBy = "album", cascade = CascadeType.ALL)
     private List<Photo> photos;
 }

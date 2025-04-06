@@ -5,14 +5,55 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Embeddable
+@Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class TrashedPhoto {
-    @Column(name = "photo_id", nullable = false)
-    private Long photoId;  // 照片ID（外键）
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private Long originalPhotoId; // 原照片的 ID（可选）
+    private String title;
+    private String url;
+    private String location;
+    @ElementCollection
+    @CollectionTable(name = "trashed_photo_tags", joinColumns = @JoinColumn(name = "trashed_photo_id"))
+    @Column(name = "tag")
+    private List<String> tags;
 
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;  // 新增列：删除时间
+    private LocalDateTime uploadTime;
+    private LocalDateTime deletedAt;
 
-    // Getters & Setters
-    // 必须有无参构造函数
+    @ManyToOne
+    @JoinColumn(name = "album_id")
+    private Album originalAlbum; // 用于还原时知道是哪个相册（或改成 Album 实体也可以）
+
+    @ManyToOne
+    @JoinColumn(name = "trash_bin_id")
+    private TrashBin trashBin;
+
+    public Long getAlbumId() {
+        return originalAlbum.getId();
+    }
+
+
+    @PrePersist
+    protected void onDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public TrashedPhoto(Photo photo, TrashBin trashBin) {
+        this.originalPhotoId = photo.getId();
+        this.title = photo.getTitle();
+        this.url = photo.getUrl();
+        this.location = photo.getLocation();
+        this.uploadTime = photo.getUploadTime();
+        this.originalAlbum = photo.getAlbum();
+        this.trashBin = trashBin;
+        this.deletedAt = LocalDateTime.now();
+        this.tags = photo.getTags();  // 确保 Photo 的 tags 也是 List<String>
+    }
+
 }

@@ -15,4 +15,7 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
 
     // 根据地点搜索照片
     List<Photo> findByLocation(String location);
+
+    List<Photo> findByAlbumId(Long albumId);
 }
+
