@@ -74,7 +74,7 @@
             <div class="action-text">回收站</div>
           </div>
           
-          <div class="action-card">
+          <div class="action-card" @click="navigateTo('/upload')">
             <div class="action-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -146,8 +146,11 @@ const navigateTo = (path) => {
 };
 
 const createNewAlbum = () => {
-  // 创建相册的逻辑
-  console.log('创建新相册');
+  // 导航到相册列表页并打开创建模式
+  router.push({ 
+    path: '/albums',
+    query: { createNew: 'true' }
+  });
 };
 </script>
 

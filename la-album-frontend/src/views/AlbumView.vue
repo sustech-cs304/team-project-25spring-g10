@@ -220,8 +220,11 @@ const editAlbum = () => {
 
 // 上传照片
 const uploadPhotos = () => {
-  // 上传照片的逻辑
-  console.log('上传照片到相册', album.value.id);
+  // 导航到照片上传页面，并传递相册ID作为参数
+  router.push({
+    name: 'PhotoUpload',
+    query: { albumId: album.value.id }
+  });
 };
 
 // 删除选中的照片
