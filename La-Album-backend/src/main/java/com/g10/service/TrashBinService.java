@@ -31,13 +31,29 @@ public class TrashBinService {
 //    }
 
 
-    // TODO: check all photos in trashBin, if delete time > 30 days, delete
+    @Transactional
     public void automaticDeletePhoto() {
+        List<TrashedPhoto> trashedPhotos = trashedPhotoRepository.findAll();
+        long currentTime = System.currentTimeMillis();
+        long thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000; // 30 天的毫秒数
 
+        for (TrashedPhoto trashedPhoto : trashedPhotos) {
+            if (trashedPhoto.getDeletedAt() != null) {
+                long deletedAtMillis = trashedPhoto.getDeletedAt()
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli();
+
+                if (currentTime - deletedAtMillis > thirtyDaysInMillis) {
+                    trashedPhotoRepository.delete(trashedPhoto);
+                }
+            }
+        }
     }
 
-    public void setDeleteDate(Long photoId) {}
 
+    // TODO: use to test automatic delete
+    public void setDeleteDate(Long photoId) {}
 
 
     // 还原照片

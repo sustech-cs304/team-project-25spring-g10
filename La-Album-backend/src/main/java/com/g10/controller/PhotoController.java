@@ -1,5 +1,6 @@
 package com.g10.controller;
 
+import com.g10.model.Album;
 import com.g10.model.Photo;
 import com.g10.service.PhotoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,5 +45,12 @@ public class PhotoController {
     public ResponseEntity<Void> deletePhoto(@PathVariable Long id) {
         photoService.deletePhoto(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // 移动照片到新相册
+    @PutMapping("/{id}/move")
+    public ResponseEntity<Photo> movePhoto(@PathVariable Long id, @RequestBody Album dest) {
+        photoService.movePhoto(id, dest);
+        return ResponseEntity.ok().build();
     }
 }

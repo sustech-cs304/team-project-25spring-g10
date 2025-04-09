@@ -30,12 +30,15 @@ public class PhotoService {
         return photoRepository.save(photo);
     }
 
-    // TODO: flip isDeleted, save it to trashBin
     public void deletePhoto(Long id) {
         photoRepository.deleteById(id);
     }
 
     //TODO: move to a new album
     public void movePhoto(Long id, Album dest) {
+        Photo photo = photoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Photo not found"));
+        photo.setAlbum(dest);
+        photoRepository.save(photo);
     }
 }

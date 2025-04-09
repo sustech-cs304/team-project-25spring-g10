@@ -4,6 +4,7 @@ import com.g10.model.Photo;
 import com.g10.model.TrashedPhoto;
 import com.g10.service.TrashedPhotoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,7 +25,7 @@ public class TrashedPhotoController {
     // 还原一张照片
     @PostMapping("/restore/{id}")
     public Photo restorePhoto(@PathVariable Long id) {
-        return trashedPhotoService.restorePhoto(id);
+        return trashedPhotoService.restorePhoto(id); // 如果抛异常，会被 GlobalExceptionHandler 处理
     }
 
     // 永久删除一张照片
@@ -33,3 +34,4 @@ public class TrashedPhotoController {
         trashedPhotoService.deleteFromTrash(id);
     }
 }
+
