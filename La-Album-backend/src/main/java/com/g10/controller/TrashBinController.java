@@ -17,7 +17,7 @@ public class TrashBinController {
     private final TrashBinService trashBinService;
 
     // 获取某个用户垃圾桶的所有照片
-    @GetMapping("/{trashBinId}/photos")
+    @GetMapping("/{trashBinId}")
     public ResponseEntity<List<TrashedPhoto>> getPhotosInTrashBin(@PathVariable Long trashBinId) {
         List<TrashedPhoto> trashedPhotos = trashBinService.getPhotosInTrashBin(trashBinId);
         if (trashedPhotos == null || trashedPhotos.isEmpty()) {
