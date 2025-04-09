@@ -5,7 +5,8 @@ import com.g10.repository.AlbumRepository;
 import com.g10.repository.PhotoRepository;
 import com.g10.repository.TrashedPhotoRepository;
 import jakarta.transaction.Transactional;
-import jdk.internal.org.jline.reader.History;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
 import org.springframework.stereotype.Service;
 
 import java.awt.desktop.OpenURIEvent;
