@@ -27,6 +27,10 @@ public class AlbumService {
         return albumRepository.findAll();
     }
 
+    public List<Album> getAllAlbumsByUserId(Long userId) {
+        return albumRepository.findByUserId(userId);
+    }
+
     public Album createAlbum(Album album) {
         return albumRepository.save(album);
     }

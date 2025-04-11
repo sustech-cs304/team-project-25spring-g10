@@ -2,6 +2,7 @@ package com.g10.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import java.util.List;
 
@@ -20,6 +21,7 @@ public class Album {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @JsonBackReference
     private User user;
 
     @Getter
