@@ -21,6 +21,32 @@
   </properties>
 
   <dependencies>
+    <!-- Spring Boot Starter Web：包含了 RestController、RequestMapping、MultipartFile 等 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Spring Boot Starter：基础注解、@Value、@Service 等 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+
+    <!-- Spring Boot Configuration Processor（可选，但用于 @Value 自动提示） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- 处理文件上传所需（可能已在 web 中包含） -->
+    <dependency>
+      <groupId>commons-fileupload</groupId>
+      <artifactId>commons-fileupload</artifactId>
+      <version>1.4</version>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
@@ -60,6 +86,18 @@
         <groupId>org.jline</groupId>
         <artifactId>jline</artifactId>
         <version>3.21.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.aliyun.oss</groupId>
+        <artifactId>aliyun-sdk-oss</artifactId>
+        <version>3.15.2</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.aliyun.oss</groupId>
+        <artifactId>aliyun-sdk-oss</artifactId>
+        <version>3.16.1</version> <!-- 可根据需要使用最新版本 -->
       </dependency>
 
   </dependencies>

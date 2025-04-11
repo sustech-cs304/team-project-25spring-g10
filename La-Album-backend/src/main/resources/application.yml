@@ -8,9 +8,16 @@ spring:
   jpa:
     database: postgresql
     hibernate:
-#      ddl-auto: update
-       ddl-auto: create
+     ddl-auto: update
+      #  ddl-auto: create
     show-sql: true
+aliyun:
+  oss:
+    endpoint: oss-cn-shenzhen.aliyuncs.com
+    access-key-id: LTAI5t5kAim3zAD8axkEoaCA
+    access-key-secret: gQUbztcirxonDLDnVfD1TfVvmUDLdf
+    bucket-name: la-album-10
+    url-prefix: https://la-album-10.oss-cn-shenzhen.aliyuncs.com/
 
 server:
   port: 9090

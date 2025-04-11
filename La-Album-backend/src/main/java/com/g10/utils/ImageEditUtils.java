@@ -1,6 +1,7 @@
 package com.g10.utils;
 
-import java.awt.Color;
+import java.awt.*;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -10,6 +11,9 @@ public class ImageEditUtils {
 
     // 调整对比度
     public static BufferedImage adjustContrast(BufferedImage image, double contrast) {
+        // 将前端的 -100 到 100 范围映射到实际的对比度值
+        contrast = (contrast + 100) * 1.27; // 映射到 0-254 范围
+        
         int width = image.getWidth();
         int height = image.getHeight();
         BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -40,6 +44,9 @@ public class ImageEditUtils {
         int height = image.getHeight();
         BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
+        // 将前端的 -100 到 100 范围映射到实际的亮度调整值
+        brightness = (int)(brightness * 1.27); // 映射到 -127 到 127 范围
+
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Color color = new Color(image.getRGB(x, y));
@@ -58,6 +65,27 @@ public class ImageEditUtils {
         return result;
     }
 
+    // 调整饱和度
+    public static BufferedImage adjustSaturation(BufferedImage image, float saturation) {
+        // 将前端的 -100 到 100 范围映射到实际的饱和度值
+        saturation = (saturation + 100) / 100f; // 映射到 0-2 范围
+        
+        int width = image.getWidth();
+        int height = image.getHeight();
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Color color = new Color(image.getRGB(x, y));
+                float[] hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
+                hsb[1] = Math.max(0, Math.min(1, hsb[1] * saturation));
+                Color newColor = new Color(Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
+                result.setRGB(x, y, newColor.getRGB());
+            }
+        }
+        return result;
+    }
+
     // 裁剪图片
     public static BufferedImage cropImage(BufferedImage image, int x, int y, int width, int height) {
         return image.getSubimage(x, y, width, height);
@@ -65,18 +93,18 @@ public class ImageEditUtils {
 
     // 旋转图片
     public static BufferedImage rotateImage(BufferedImage image, int degrees) {
-        int width = image.getWidth();
-        int height = image.getHeight();
-        
         double rads = Math.toRadians(degrees);
         double sin = Math.abs(Math.sin(rads));
         double cos = Math.abs(Math.cos(rads));
+        
+        int width = image.getWidth();
+        int height = image.getHeight();
         
         int newWidth = (int) Math.floor(width * cos + height * sin);
         int newHeight = (int) Math.floor(height * cos + width * sin);
         
         BufferedImage result = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-        java.awt.Graphics2D g2d = result.createGraphics();
+        Graphics2D g2d = result.createGraphics();
         
         g2d.translate((newWidth - width) / 2, (newHeight - height) / 2);
         g2d.rotate(rads, width / 2, height / 2);
@@ -86,25 +114,33 @@ public class ImageEditUtils {
         return result;
     }
 
-    // 调整饱和度
-    public static BufferedImage adjustSaturation(BufferedImage image, float saturation) {
+    // 水平翻转
+    public static BufferedImage flipHorizontal(BufferedImage image) {
         int width = image.getWidth();
         int height = image.getHeight();
         BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = result.createGraphics();
         
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                Color color = new Color(image.getRGB(x, y));
-                float[] hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
-                hsb[1] = Math.max(0, Math.min(1, hsb[1] * saturation)); // 调整饱和度
-                Color newColor = new Color(Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
-                result.setRGB(x, y, newColor.getRGB());
-            }
-        }
+        g2d.drawImage(image, width, 0, -width, height, null);
+        g2d.dispose();
+        
         return result;
     }
 
-    // 添加黑白滤镜
+    // 垂直翻转
+    public static BufferedImage flipVertical(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = result.createGraphics();
+        
+        g2d.drawImage(image, 0, height, width, -height, null);
+        g2d.dispose();
+        
+        return result;
+    }
+
+    // 应用黑白滤镜
     public static BufferedImage applyGrayscaleFilter(BufferedImage image) {
         int width = image.getWidth();
         int height = image.getHeight();
@@ -121,8 +157,8 @@ public class ImageEditUtils {
         return result;
     }
 
-    // 添加复古滤镜
-    public static BufferedImage applyVintageFilter(BufferedImage image) {
+    // 应用怀旧滤镜
+    public static BufferedImage applySepiaFilter(BufferedImage image) {
         int width = image.getWidth();
         int height = image.getHeight();
         BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -130,23 +166,82 @@ public class ImageEditUtils {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Color color = new Color(image.getRGB(x, y));
-                int r = color.getRed();
-                int g = color.getGreen();
-                int b = color.getBlue();
+                int red = color.getRed();
+                int green = color.getGreen();
+                int blue = color.getBlue();
                 
-                int newRed = (int) (r * 0.9 + g * 0.1);
-                int newGreen = (int) (g * 0.9 + b * 0.1);
-                int newBlue = (int) (b * 0.9 + r * 0.1);
+                int newRed = (int) (0.393 * red + 0.769 * green + 0.189 * blue);
+                int newGreen = (int) (0.349 * red + 0.686 * green + 0.168 * blue);
+                int newBlue = (int) (0.272 * red + 0.534 * green + 0.131 * blue);
                 
-                newRed = Math.min(255, Math.max(0, newRed));
-                newGreen = Math.min(255, Math.max(0, newGreen));
-                newBlue = Math.min(255, Math.max(0, newBlue));
+                newRed = Math.min(255, newRed);
+                newGreen = Math.min(255, newGreen);
+                newBlue = Math.min(255, newBlue);
                 
                 Color newColor = new Color(newRed, newGreen, newBlue);
                 result.setRGB(x, y, newColor.getRGB());
             }
         }
         return result;
+    }
+
+    // 应用暖色滤镜
+    public static BufferedImage applyWarmFilter(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Color color = new Color(image.getRGB(x, y));
+                int red = Math.min(255, (int)(color.getRed() * 1.1));
+                int green = color.getGreen();
+                int blue = Math.max(0, (int)(color.getBlue() * 0.9));
+                
+                Color newColor = new Color(red, green, blue);
+                result.setRGB(x, y, newColor.getRGB());
+            }
+        }
+        return result;
+    }
+
+    // 应用冷色滤镜
+    public static BufferedImage applyCoolFilter(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Color color = new Color(image.getRGB(x, y));
+                int red = Math.max(0, (int)(color.getRed() * 0.9));
+                int green = color.getGreen();
+                int blue = Math.min(255, (int)(color.getBlue() * 1.1));
+                
+                Color newColor = new Color(red, green, blue);
+                result.setRGB(x, y, newColor.getRGB());
+            }
+        }
+        return result;
+    }
+
+    // 应用戏剧滤镜
+    public static BufferedImage applyDramaticFilter(BufferedImage image) {
+        BufferedImage result = adjustContrast(image, 50);
+        return adjustSaturation(result, 20);
+    }
+
+    // 应用褪色滤镜
+    public static BufferedImage applyFadeFilter(BufferedImage image) {
+        BufferedImage result = adjustBrightness(image, 10);
+        result = adjustContrast(result, -10);
+        return adjustSaturation(result, -40);
+    }
+
+    // 应用柔和滤镜
+    public static BufferedImage applyMutedFilter(BufferedImage image) {
+        BufferedImage result = adjustBrightness(image, 5);
+        return adjustSaturation(result, -30);
     }
 
     public static void main(String[] args) {
