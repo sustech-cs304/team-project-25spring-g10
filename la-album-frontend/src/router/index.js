@@ -8,6 +8,7 @@ import SearchView from '../views/SearchView.vue';
 import EditPhoto from '../views/EditPhoto.vue';
 import SharePhoto from '../views/SharePhoto.vue';
 import TrashBin from '../views/TrashBin.vue';
+import PhotoUploadEdit from '../views/PhotoUploadEdit.vue';
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
@@ -18,6 +19,7 @@ const routes = [
   { path: '/edit/:id', name: 'EditPhoto', component: EditPhoto, props: true },
   { path: '/share/:id', name: 'SharePhoto', component: SharePhoto, props: true },
   { path: '/trash', name: 'TrashBin', component: TrashBin },
+  { path: '/upload', name: 'PhotoUpload', component: PhotoUploadEdit },
 ];
 
 const router = createRouter({
