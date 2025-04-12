@@ -3,7 +3,6 @@ package com.g10.service;
 import com.g10.model.Album;
 import com.g10.model.Photo;
 import com.g10.repository.PhotoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,8 +11,11 @@ import java.util.Optional;
 @Service
 public class PhotoService {
 
-    @Autowired
-    private PhotoRepository photoRepository;
+    private final PhotoRepository photoRepository;
+
+    public PhotoService(PhotoRepository photoRepository) {
+        this.photoRepository = photoRepository;
+    }
 
     // 获取所有照片
     public List<Photo> getAllPhotos() {

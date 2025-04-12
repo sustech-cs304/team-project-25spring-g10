@@ -19,5 +19,19 @@ spring:
       password:  # 如果有密码，请在这里填写
       database: 0
 
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 server:
   port: 9090
+
+# 阿里云OSS配置
+aliyun:
+  oss:
+    endpoint: oss-cn-beijing.aliyuncs.com
+    accessKeyId: LTAI5tEnZ1ZE7QNq1fbRp2RC
+    accessKeySecret: SH0gtLOZfqCK2ctr4OAnzUiIft1zgE
+    bucketName: big-event-isaac
