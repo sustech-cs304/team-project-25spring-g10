@@ -64,9 +64,9 @@ public class UserController {
     // 用户注册
     @PostMapping("/register")
     public Result register(
-            // @Pattern(regexp = "^\\S{5,16}$", message = "用户名必须是5-16位非空字符") 
+            @Pattern(regexp = "^\\S{5,16}$", message = "用户名必须是5-16位非空字符") 
             @RequestParam String username, 
-            // @Pattern(regexp = "^\\S{5,16}$", message = "密码必须是5-16位非空字符") 
+            @Pattern(regexp = "^\\S{5,16}$", message = "密码必须是5-16位非空字符") 
             @RequestParam String password) {
         
         // 查询用户是否存在
@@ -88,9 +88,9 @@ public class UserController {
     // 用户登录
     @PostMapping("/login")
     public Result<String> login(
-            @Pattern(regexp = "^\\S{5,16}$", message = "用户名必须是5-16位非空字符") 
+            // @Pattern(regexp = "^\\S{5,16}$", message = "用户名必须是5-16位非空字符") 
             @RequestParam String username, 
-            @Pattern(regexp = "^\\S{5,16}$", message = "密码必须是5-16位非空字符") 
+            // @Pattern(regexp = "^\\S{5,16}$", message = "密码必须是5-16位非空字符") 
             @RequestParam String password) {
         
         // 根据用户名查询用户
