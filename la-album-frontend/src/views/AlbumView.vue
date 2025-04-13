@@ -4,7 +4,7 @@
       <el-skeleton animated />
     </div>
     
-    <template v-else-if="album">
+    <template v-else-if="album && album.photos">
       <div class="album-header">
         <div class="container">
           <div class="album-info">
@@ -96,6 +96,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import PhotoThumbnail from '@/components/photo/PhotoThumbnail.vue';
+import axios from 'axios';
 
 const route = useRoute();
 const router = useRouter();
@@ -107,75 +108,16 @@ const selectedPhotos = ref([]);
 // 获取相册数据
 onMounted(async () => {
   const albumId = parseInt(route.params.id);
-  
-  // 模拟API调用
-  setTimeout(() => {
-    // 这里将来会替换为真实的API调用
-    album.value = {
-      id: albumId,
-      title: '2023夏日旅行',
-      description: '2023年暑假的欧洲之旅，收集了各种美丽的风景和难忘的瞬间。',
-      coverUrl: 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-      createdAt: '2023-07-15T12:00:00Z',
-      photos: [
-        {
-          id: 1,
-          albumId: albumId,
-          title: '威尼斯大运河',
-          imageUrl: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-          description: '意大利威尼斯大运河的美丽景色，拍摄于黄昏时分。',
-          createdAt: '2023-07-15T14:30:00Z',
-          location: '意大利，威尼斯'
-        },
-        {
-          id: 2,
-          albumId: albumId,
-          title: '巴黎埃菲尔铁塔',
-          imageUrl: 'https://images.unsplash.com/photo-1543349689-9a4d426bee8e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-          description: '从香榭丽舍大街拍摄的埃菲尔铁塔夜景。',
-          createdAt: '2023-07-18T20:15:00Z',
-          location: '法国，巴黎'
-        },
-        {
-          id: 3,
-          albumId: albumId,
-          title: '伦敦塔桥',
-          imageUrl: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-          description: '伦敦标志性的塔桥，横跨泰晤士河。',
-          createdAt: '2023-07-20T11:45:00Z',
-          location: '英国，伦敦'
-        },
-        {
-          id: 4,
-          albumId: albumId,
-          title: '雅典卫城',
-          imageUrl: 'https://images.unsplash.com/photo-1555993539-1732b0258235?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-          description: '希腊雅典卫城，帕特农神庙的宏伟遗迹。',
-          createdAt: '2023-07-22T09:30:00Z',
-          location: '希腊，雅典'
-        },
-        {
-          id: 5,
-          albumId: albumId,
-          title: '阿姆斯特丹运河',
-          imageUrl: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-          description: '荷兰阿姆斯特丹美丽的运河和自行车。',
-          createdAt: '2023-07-24T16:20:00Z',
-          location: '荷兰，阿姆斯特丹'
-        },
-        {
-          id: 6,
-          albumId: albumId,
-          title: '布拉格城堡',
-          imageUrl: 'https://images.unsplash.com/photo-1519677100203-a0e668c92439?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-          description: '捷克布拉格老城和城堡的全景图。',
-          createdAt: '2023-07-26T13:10:00Z',
-          location: '捷克，布拉格'
-        }
-      ]
-    };
-    loading.value = false;
-  }, 800);
+
+  // 获取特定相册的 API 调用
+  try {
+    const response = await axios.get(`http://localhost:9090/api/album/${albumId}`);
+    album.value = response.data;
+  } catch (error) {
+    console.error("加载相册数据失败:", error);
+  } finally {
+    loading.value = false;  // 结束加载状态
+  }
 });
 
 // 格式化日期
@@ -220,7 +162,6 @@ const editAlbum = () => {
 
 // 上传照片
 const uploadPhotos = () => {
-  // 导航到照片上传页面，并传递相册ID作为参数
   router.push({
     name: 'PhotoUpload',
     query: { albumId: album.value.id }
@@ -229,9 +170,6 @@ const uploadPhotos = () => {
 
 // 删除选中的照片
 const deleteSelectedPhotos = () => {
-  // 删除照片的逻辑
-  console.log('删除选中的照片', selectedPhotos.value);
-  // 这里会调用API删除照片，并从当前列表中移除
   album.value.photos = album.value.photos.filter(photo => !selectedPhotos.value.includes(photo.id));
   selectedPhotos.value = [];
   selectionMode.value = false;
@@ -239,7 +177,6 @@ const deleteSelectedPhotos = () => {
 
 // 分享选中的照片
 const shareSelectedPhotos = () => {
-  // 分享照片的逻辑
   console.log('分享选中的照片', selectedPhotos.value);
 };
 
