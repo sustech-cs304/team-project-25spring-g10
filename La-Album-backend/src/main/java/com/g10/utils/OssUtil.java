@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
+import java.net.URL;
+import java.util.Date;
 import java.util.UUID;
 
 @Component
@@ -51,14 +53,41 @@ public class OssUtil {
                 metadata
             );
             
-            // 生成访问URL
-            return generateUrl(objectName);
+            // 返回对象名称而不是完整URL
+            return objectName;
         } catch (Exception e) {
             System.out.println("OSS配置信息：");
             System.out.println("Endpoint: " + ossConfig.getEndpoint());
             System.out.println("BucketName: " + ossConfig.getBucketName());
             System.out.println("OSS错误: " + e.getMessage());
             throw new RuntimeException("文件上传失败", e);
+        }
+    }
+    
+    public String generateSignedUrl(String objectName) {
+        try {
+            // 如果objectName已经是完整URL，提取出对象名称
+            if (objectName != null && objectName.contains("/")) {
+                // 从URL中提取对象名称
+                String[] parts = objectName.split("/");
+                objectName = parts[parts.length - 1];
+            }
+            
+            System.out.println("生成签名URL的对象名称: " + objectName);
+            
+            // 设置URL过期时间为1小时
+            Date expiration = new Date(System.currentTimeMillis() + 3600 * 1000);
+            // 生成带签名的URL
+            URL signedUrl = ossClient.generatePresignedUrl(
+                ossConfig.getBucketName(), 
+                objectName, 
+                expiration
+            );
+            return signedUrl.toString();
+        } catch (Exception e) {
+            System.out.println("生成签名URL失败: " + e.getMessage());
+            System.out.println("对象名称: " + objectName);
+            throw new RuntimeException("生成签名URL失败", e);
         }
     }
     
@@ -80,9 +109,5 @@ public class OssUtil {
             default:
                 return "application/octet-stream";
         }
-    }
-    
-    private String generateUrl(String objectName) {
-        return "https://" + ossConfig.getBucketName() + "." + ossConfig.getEndpoint() + "/" + objectName;
     }
 } 

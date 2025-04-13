@@ -31,6 +31,11 @@ public class PhotoController {
     @GetMapping
     public ResponseEntity<List<Photo>> getAllPhotos() {
         List<Photo> photos = photoService.getAllPhotos();
+        // 为每张照片生成带签名的URL
+        photos.forEach(photo -> {
+            String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
+            photo.setUrl(signedUrl);
+        });
         return ResponseEntity.ok(photos);
     }
 
@@ -38,8 +43,13 @@ public class PhotoController {
     @GetMapping("/{id}")
     public ResponseEntity<Photo> getPhotoById(@PathVariable Long id) {
         Optional<Photo> photo = photoService.getPhotoById(id);
-        return photo.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        if (photo.isPresent()) {
+            // 生成带签名的URL
+            String signedUrl = ossUtil.generateSignedUrl(photo.get().getUrl());
+            photo.get().setUrl(signedUrl);
+            return ResponseEntity.ok(photo.get());
+        }
+        return ResponseEntity.notFound().build();
     }
 
     // 上传新照片
