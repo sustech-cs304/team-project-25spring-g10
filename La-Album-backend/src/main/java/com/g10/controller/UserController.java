@@ -28,9 +28,7 @@ import java.util.concurrent.TimeUnit;
 public class UserController {
 
     private final UserService userService;
-    
-    // @Autowired
-    // private StringRedisTemplate stringRedisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     // 获取所有用户
     @GetMapping
@@ -88,9 +86,7 @@ public class UserController {
     // 用户登录
     @PostMapping("/login")
     public Result<String> login(
-            // @Pattern(regexp = "^\\S{5,16}$", message = "用户名必须是5-16位非空字符") 
             @RequestParam String username, 
-            // @Pattern(regexp = "^\\S{5,16}$", message = "密码必须是5-16位非空字符") 
             @RequestParam String password) {
         
         // 根据用户名查询用户
@@ -109,9 +105,10 @@ public class UserController {
             claims.put("username", loginUser.getUsername());
             String token = JwtUtil.genToken(claims);
             
-            // 将令牌存入Redis，有效期1小时
-            // ValueOperations<String, String> operations = stringRedisTemplate.opsForValue();
-            // operations.set(token, token, 1, TimeUnit.HOURS);
+            // 将令牌存入Redis，使用用户ID作为key
+            ValueOperations<String, String> operations = stringRedisTemplate.opsForValue();
+            String userKey = "user:" + loginUser.getId();
+            operations.set(userKey, token, 1, TimeUnit.HOURS);
             
             return Result.success(token);
         }
@@ -174,5 +171,21 @@ public class UserController {
             throw new RuntimeException("Failed to delete user with ID: " + id);
         }
         return ResponseEntity.ok("User deleted successfully.");
+    }
+
+    // 用户登出
+    @PostMapping("/logout")
+    public Result logout(@RequestHeader("Authorization") String token) {
+        try {
+            // 解析token获取用户ID
+            Map<String, Object> claims = JwtUtil.parseToken(token);
+            Long userId = Long.valueOf(claims.get("id").toString());
+            // 删除该用户的Redis记录
+            String userKey = "user:" + userId;
+            stringRedisTemplate.delete(userKey);
+            return Result.success();
+        } catch (Exception e) {
+            return Result.error("登出失败");
+        }
     }
 }

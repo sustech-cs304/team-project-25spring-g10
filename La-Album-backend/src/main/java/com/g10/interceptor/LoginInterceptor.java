@@ -28,16 +28,19 @@ public class LoginInterceptor implements HandlerInterceptor {
         
         // 验证token
         try {
-            // 从Redis中获取相同的token，检查是否失效
-            // ValueOperations<String, String> operations = stringRedisTemplate.opsForValue();
-            // String redisToken = operations.get(token);
-            // if (redisToken == null) {
-            //     // token已经失效
-            //     throw new RuntimeException("登录已过期，请重新登录");
-            // }
-            
-            // 解析token，获取用户信息
+            // 先解析token获取用户信息
             Map<String, Object> claims = JwtUtil.parseToken(token);
+            Long userId = Long.valueOf(claims.get("id").toString());
+            
+            // 从Redis中获取该用户的token
+            ValueOperations<String, String> operations = stringRedisTemplate.opsForValue();
+            String userKey = "user:" + userId;
+            String redisToken = operations.get(userKey);
+            
+            // 验证当前token是否为最新token
+            if (redisToken == null || !token.equals(redisToken)) {
+                throw new RuntimeException("登录已失效，请重新登录");
+            }
             
             // 把业务数据存储到ThreadLocal中
             ThreadLocalUtil.set(claims);
