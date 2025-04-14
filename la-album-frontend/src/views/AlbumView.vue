@@ -101,7 +101,7 @@ import axios from 'axios';
 const route = useRoute();
 const router = useRouter();
 const loading = ref(true);
-const album = ref(null);
+const album = ref({});
 const selectionMode = ref(false);
 const selectedPhotos = ref([]);
 
@@ -112,11 +112,11 @@ onMounted(async () => {
     // 调用后端 API 获取相册中的照片
     const response = await axios.get(`http://localhost:9090/api/albums/${albumId}/photos`, {
       headers: {
-        Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbXMiOnsiaWQiOjIsInVzZXJuYW1lIjoieWhqMTExIn0sImV4cCI6MTc0NDU1Njc0MX0.pqNhtdAi8RjOk4-YTReJHJBFkbwrEjbR4YAheqk7CPM' // 替换为实际的令牌
+        Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbXMiOnsiaWQiOjIsInVzZXJuYW1lIjoieWhqMTExIn0sImV4cCI6MTc0NDYzNzA0MX0.GZLUaYnvdf1sj8VdI3f4e3IjZmFZOGeftKDvWTmajJ0' // 替换为实际的令牌
       }
     });
-    console.log(response.data.data) // 假设后端返回的数据结构为 { data: [...] }
     album.value.photos = response.data.data; // 获取照片列表
+    console.log(album.value.photos )
   } catch (err) {
     console.error('Failed to fetch photos:', err);
   } finally {

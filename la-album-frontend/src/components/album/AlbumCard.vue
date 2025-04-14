@@ -1,7 +1,11 @@
 <template>
   <div class="album-card" @click="navigateToAlbum">
     <div class="album-cover">
-      <img :src="album.coverUrl" :alt="album.title + '封面'">
+        <img 
+      :src="album.photos && album.photos.length > 0 ? album.photos[0].url : album.coverUrl" 
+      :alt="album.title + '封面'"
+        >
+      <!-- <img :src="album.coverUrl" :alt="album.title + '封面'"> -->
       <div class="album-hover">
         <div class="album-actions">
           <button class="action-btn view" @click.stop="navigateToAlbum">

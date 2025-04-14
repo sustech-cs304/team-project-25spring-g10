@@ -56,7 +56,7 @@
           
           <!-- 使用albumCard组件渲染每一个相册 -->
           <div v-else class="albums-grid">
-            <PeopleCard 
+            <AlbumCard 
               v-for="album in filteredAlbums" 
               :key="album.id" 
               :album="album"
@@ -94,7 +94,7 @@
   <script setup>
   import { ref, computed, onMounted } from 'vue';
 //   import AlbumCard from '@/components/album/AlbumCard.vue';
-  import PeopleCard from '@/components/album/PeopleCard.vue';
+  import AlbumCard from '@/components/album/AlbumCard.vue';
   import axios from 'axios';
   const loading = ref(true);
   const albums = ref([]);
@@ -109,10 +109,21 @@
     // 调用后端 API 获取相册数据，并添加 Authorization 头
     const response = await axios.get('http://localhost:9090/api/albums', {
       headers: {
-        Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbXMiOnsiaWQiOjIsInVzZXJuYW1lIjoieWhqMTExIn0sImV4cCI6MTc0NDYzMzU3Nn0.aU1ybZKfleEczrjovloLZ802ZvTxDYS0RUwA8bGlTs4' // 替换 YOUR_ACCESS_TOKEN 为实际的令牌
+        Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbXMiOnsiaWQiOjIsInVzZXJuYW1lIjoieWhqMTExIn0sImV4cCI6MTc0NDYzNzA0MX0.GZLUaYnvdf1sj8VdI3f4e3IjZmFZOGeftKDvWTmajJ0' // 替换 YOUR_ACCESS_TOKEN 为实际的令牌
       }
     });
-    albums.value = response.data.data;
+      // 获取相册数据
+      albums.value = response.data.data.map(album => {
+      // 如果 photos 数组存在且有内容，设置 url 为第一张照片的 url
+      if (album.photos && album.photos.length > 0) {
+        album.url = album.photos[0].url
+        console.log(album.url)
+      } else {
+        // 如果没有照片，设置一个占位图片
+        album.url = 'https://via.placeholder.com/150';
+      }
+      return album;
+    });
     console.log(albums.value)
   } catch (error) {
     console.error('Failed to fetch albums:', error);
