@@ -17,6 +17,7 @@
           <ul class="nav-links">
             <li><router-link to="/" class="nav-link" :class="{ 'active': currentRoute === '/' }">首页</router-link></li>
             <li><router-link to="/albums" class="nav-link" :class="{ 'active': currentRoute.includes('/album') }">相册管理</router-link></li>
+            <li><router-link to="/memories" class="nav-link" :class="{ 'active': currentRoute.includes('/memor') }">回忆视频</router-link></li>
             <li><router-link to="/search" class="nav-link" :class="{ 'active': currentRoute === '/search' }">搜索照片</router-link></li>
             <li><router-link to="/trash" class="nav-link" :class="{ 'active': currentRoute === '/trash' }">回收站</router-link></li>
           </ul>
@@ -65,6 +66,13 @@
                 </svg>
                 上传照片
               </a>
+              <a @click="createNewMemory">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                </svg>
+                创建回忆视频
+              </a>
             </div>
           </div>
         </div>
@@ -90,10 +98,12 @@
         <ul class="mobile-nav-links">
           <li><router-link to="/" class="mobile-nav-link" @click="closeMobileMenu">首页</router-link></li>
           <li><router-link to="/albums" class="mobile-nav-link" @click="closeMobileMenu">相册管理</router-link></li>
+          <li><router-link to="/memories" class="mobile-nav-link" @click="closeMobileMenu">回忆视频</router-link></li>
           <li><router-link to="/search" class="mobile-nav-link" @click="closeMobileMenu">搜索照片</router-link></li>
           <li><router-link to="/trash" class="mobile-nav-link" @click="closeMobileMenu">回收站</router-link></li>
           <li class="mobile-nav-action" @click="createNewAlbum">新建相册</li>
           <li class="mobile-nav-action" @click="uploadPhotos">上传照片</li>
+          <li class="mobile-nav-action" @click="createNewMemory">创建回忆</li>
         </ul>
       </nav>
     </div>
@@ -177,6 +187,17 @@ const uploadPhotos = () => {
   dropdownOpen.value = false;
   // 导航到上传页面
   router.push({ name: 'PhotoUpload' });
+};
+
+// 创建新回忆视频
+const createNewMemory = () => {
+  closeMobileMenu();
+  dropdownOpen.value = false;
+  // 导航到回忆列表页面并触发创建模式
+  router.push({ 
+    path: '/memories',
+    query: { createNew: 'true' }
+  });
 };
 
 // 初始应用深色模式

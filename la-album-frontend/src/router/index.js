@@ -9,6 +9,9 @@ import EditPhoto from '../views/EditPhoto.vue';
 import SharePhoto from '../views/SharePhoto.vue';
 import TrashBin from '../views/TrashBin.vue';
 import PhotoUploadEdit from '../views/PhotoUploadEdit.vue';
+import MemoryListView from '../views/MemoryListView.vue';
+import MemoryView from '../views/MemoryView.vue';
+import EditMemoryView from '../views/EditMemoryView.vue';
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
@@ -20,6 +23,9 @@ const routes = [
   { path: '/share/:id', name: 'SharePhoto', component: SharePhoto, props: true },
   { path: '/trash', name: 'TrashBin', component: TrashBin },
   { path: '/upload', name: 'PhotoUpload', component: PhotoUploadEdit },
+  { path: '/memories', name: 'MemoryList', component: MemoryListView },
+  { path: '/memory/:id', name: 'Memory', component: MemoryView, props: true },
+  { path: '/edit-memory/:id', name: 'EditMemory', component: EditMemoryView, props: true },
 ];
 
 const router = createRouter({
