@@ -203,6 +203,8 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import UploadProgress from '@/components/upload/UploadProgress.vue';
+import { fetchAlbumList } from '@/api/album';
+import { ElMessage } from 'element-plus';
 
 const route = useRoute();
 const router = useRouter();
@@ -221,29 +223,37 @@ const newAlbum = ref({
   description: ''
 });
 
-// 从路由参数获取相册ID
+// 获取相册列表
+const fetchAlbums = async () => {
+  try {
+    const response = await fetchAlbumList();
+    
+    if (response && Array.isArray(response)) {
+      // 处理相册数据，只需要id和title用于下拉选择
+      albums.value = response.map(album => ({
+        id: album.id,
+        title: album.title
+      }));
+    } else {
+      albums.value = [];
+      ElMessage.warning('获取相册列表失败，请刷新页面重试');
+    }
+  } catch (error) {
+    console.error('获取相册列表失败:', error);
+    ElMessage.error('获取相册列表失败，请稍后再试');
+    albums.value = [];
+  }
+};
+
 onMounted(() => {
   const albumId = route.query.albumId;
   if (albumId) {
     selectedAlbumId.value = Number(albumId);
   }
   
-  // 模拟获取相册列表
+  // 获取相册列表
   fetchAlbums();
 });
-
-// 获取相册列表
-const fetchAlbums = () => {
-  // 模拟API调用
-  setTimeout(() => {
-    albums.value = [
-      { id: 1, title: '旅行相册' },
-      { id: 2, title: '家庭相册' },
-      { id: 3, title: '美食收藏' },
-      { id: 4, title: '风景照片' }
-    ];
-  }, 500);
-};
 
 // 计算是否有已完成的上传
 const hasCompletedUploads = computed(() => {

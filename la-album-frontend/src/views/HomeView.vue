@@ -107,6 +107,7 @@ onMounted(async () => {
     loading.value = true;
     // 调用API获取最近的相册
     const recentAlbums = await fetchRecentAlbums(4); // 获取最近的4个相册
+    console.log('获取最近相册返回:', recentAlbums);
     
     // 处理返回的数据
     if (Array.isArray(recentAlbums)) {
@@ -123,9 +124,12 @@ onMounted(async () => {
           ...album,
           coverUrl,
           photoCount,
-          createdAt: album.createTime // 使用createTime字段作为createdAt
+          createdAt: album.createTime || new Date().toISOString() // 使用createTime字段作为createdAt
         };
       });
+    } else {
+      console.error('最近相册数据格式不正确:', recentAlbums);
+      albums.value = [];
     }
   } catch (error) {
     console.error('获取最近相册失败:', error);

@@ -96,7 +96,8 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import PhotoThumbnail from '@/components/photo/PhotoThumbnail.vue';
-import axios from 'axios';
+import { fetchAlbumById } from '@/api/album';
+import { ElMessage } from 'element-plus';
 
 const route = useRoute();
 const router = useRouter();
@@ -108,15 +109,33 @@ const selectedPhotos = ref([]);
 // 获取相册数据
 onMounted(async () => {
   const albumId = parseInt(route.params.id);
-
-  // 获取特定相册的 API 调用
+  
+  // 获取特定相册的API调用
   try {
-    const response = await axios.get(`http://localhost:9090/api/album/${albumId}`);
-    album.value = response.data;
+    loading.value = true;
+    const response = await fetchAlbumById(albumId);
+    
+    // 检查返回格式，正确解析数据
+    // 后端返回的格式可能是 { code: 0, message: "操作成功", data: 相册数据 }
+    console.log('获取相册响应:', response);
+    
+    if (response && response.code === 0 && response.data) {
+      // 正确处理相册数据
+      album.value = {
+        ...response.data,
+        createdAt: response.data.createTime || new Date().toISOString(), // 保持字段一致性
+        photos: response.data.photos || []
+      };
+      console.log('处理后的相册数据:', album.value);
+    } else {
+      console.error('相册数据格式不正确:', response);
+      ElMessage.error('相册不存在或无法访问');
+    }
   } catch (error) {
     console.error("加载相册数据失败:", error);
+    ElMessage.error('加载相册数据失败，请稍后再试');
   } finally {
-    loading.value = false;  // 结束加载状态
+    loading.value = false;
   }
 });
 

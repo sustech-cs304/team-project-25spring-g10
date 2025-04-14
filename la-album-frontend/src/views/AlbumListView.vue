@@ -160,6 +160,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AlbumCard from '@/components/album/AlbumCard.vue';
+import { fetchAlbumList, createAlbum } from '@/api/album';
+import { ElMessage } from 'element-plus';
 
 const loading = ref(true);
 const albums = ref([]);
@@ -184,77 +186,43 @@ onMounted(async () => {
     router.replace({ path: route.path });
   }
   
-  // 模拟API调用
-  setTimeout(() => {
-    // 这里将来会替换为真实的API调用
-    albums.value = [
-      {
-        id: 1,
-        title: '夏日旅行',
-        description: '2023年暑假的欧洲之旅，收集了各种美丽的风景和难忘的瞬间。',
-        coverUrl: 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 48,
-        createdAt: '2023-07-15T12:00:00Z'
-      },
-      {
-        id: 2,
-        title: '家庭聚会',
-        description: '春节期间与家人的欢乐时光，记录了我们一起制作饺子和看春晚的瞬间。',
-        coverUrl: 'https://images.unsplash.com/photo-1493612276216-ee3925520721?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 36,
-        createdAt: '2023-01-22T18:30:00Z'
-      },
-      {
-        id: 3,
-        title: '毕业典礼',
-        description: '大学毕业典礼的照片集锦，包含了与同学们的合照和校园美景。',
-        coverUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 24,
-        createdAt: '2022-06-30T10:15:00Z'
-      },
-      {
-        id: 4,
-        title: '城市风光',
-        description: '城市建筑和街头摄影作品集，展现都市生活的多样性和活力。',
-        coverUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 52,
-        createdAt: '2023-04-10T14:20:00Z'
-      },
-      {
-        id: 5,
-        title: '美食收藏',
-        description: '各种美食的照片记录，包括家常菜、餐厅美食和旅行中尝试的异国料理。',
-        coverUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 29,
-        createdAt: '2023-02-15T08:45:00Z'
-      },
-      {
-        id: 6,
-        title: '宠物日常',
-        description: '宠物猫咪和狗狗的日常生活照片，记录它们的成长和有趣瞬间。',
-        coverUrl: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 43,
-        createdAt: '2023-03-05T16:30:00Z'
-      },
-      {
-        id: 7,
-        title: '花卉植物',
-        description: '各种花卉和植物的特写照片，记录大自然的美丽细节和季节变化。',
-        coverUrl: 'https://images.unsplash.com/photo-1457089328109-e5d9bd499191?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 18,
-        createdAt: '2022-11-20T10:00:00Z'
-      },
-      {
-        id: 8,
-        title: '户外探险',
-        description: '徒步旅行、露营和其他户外活动的照片集，展示大自然的壮丽景色。',
-        coverUrl: 'https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 32,
-        createdAt: '2023-05-08T09:15:00Z'
-      }
-    ];
+  try {
+    loading.value = true;
+    // 调用API获取所有相册
+    const response = await fetchAlbumList();
+    
+    console.log('获取相册列表响应:', response);
+    
+    if (response && response.code === 0 && Array.isArray(response.data)) {
+      // 处理相册数据
+      albums.value = response.data.map(album => {
+        // 添加封面URL (如果相册有照片，使用第一张照片作为封面)
+        const coverUrl = album.photos && album.photos.length > 0 
+          ? album.photos[0].url 
+          : 'https://images.unsplash.com/photo-1533669955142-6a73332af4db?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
+        
+        // 计算照片数量
+        const photoCount = album.photos ? album.photos.length : 0;
+        
+        return {
+          ...album,
+          coverUrl,
+          photoCount,
+          createdAt: album.createTime || new Date().toISOString() // 使用createTime字段作为createdAt
+        };
+      });
+    } else {
+      console.error('相册列表数据格式不正确:', response);
+      ElMessage.error('获取相册列表失败，请稍后再试');
+      albums.value = [];
+    }
+  } catch (error) {
+    console.error('获取相册列表失败:', error);
+    ElMessage.error('获取相册列表失败，请稍后再试');
+    albums.value = [];
+  } finally {
     loading.value = false;
-  }, 800);
+  }
 });
 
 // 根据搜索和排序筛选相册
@@ -330,32 +298,54 @@ const createNewAlbum = () => {
 
 // 保存新相册
 const saveNewAlbum = async () => {
+  if (!newAlbum.value.title.trim()) {
+    ElMessage.warning('请输入相册标题');
+    return;
+  }
+  
   isCreatingAlbum.value = true;
   try {
-    // 这里将来会替换为真实的API调用
-    setTimeout(() => {
-      const newId = Math.max(0, ...albums.value.map(a => a.id)) + 1;
+    // 准备相册数据
+    const albumData = {
+      title: newAlbum.value.title,
+      description: newAlbum.value.description || ''
+    };
+    
+    // 调用API创建相册
+    const response = await createAlbum(albumData);
+    console.log('创建相册响应:', response);
+    
+    if (response && response.code === 0 && response.data) {
+      // 处理新创建的相册数据
+      const createdAlbum = response.data;
       const newAlbumData = {
-        id: newId,
-        title: newAlbum.value.title,
-        description: newAlbum.value.description,
+        ...createdAlbum,
         coverUrl: 'https://images.unsplash.com/photo-1533669955142-6a73332af4db?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // 默认封面
         photoCount: 0,
-        createdAt: new Date().toISOString()
+        createdAt: createdAlbum.createTime || new Date().toISOString()
       };
-      albums.value.unshift(newAlbumData); // 添加到列表开头
+      
+      // 添加到列表开头
+      albums.value.unshift(newAlbumData);
+      
+      // 关闭对话框并重置表单
       showCreateAlbumModal.value = false;
       newAlbum.value = { title: '', description: '' };
-      isCreatingAlbum.value = false;
       
-      // 如果正在按最新排序，不需要重新排序
-      // 对于其他排序方式，可能需要重新应用排序
+      ElMessage.success('相册创建成功');
+      
+      // 重新应用排序
       if (sortOption.value !== 'newest') {
         filterAlbums();
       }
-    }, 1000); // 模拟网络延迟
+    } else {
+      console.error('创建相册返回格式不正确:', response);
+      ElMessage.error('创建相册失败，请稍后再试');
+    }
   } catch (error) {
-    console.error('创建相册失败', error);
+    console.error('创建相册失败:', error);
+    ElMessage.error('创建相册失败，请稍后再试');
+  } finally {
     isCreatingAlbum.value = false;
   }
 };
