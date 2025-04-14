@@ -10,6 +10,6 @@ public class LaAlbumBackendApplication
     {
         System.out.println("🚀 La-Album 后端正在启动...");
         SpringApplication.run(LaAlbumBackendApplication.class, args);
-        System.out.println("✅ La-Album 后端启动成功！访问: http://localhost:8080");
+        System.out.println("✅ La-Album 后端启动成功！访问: http://localhost:9090");
     }
 }
