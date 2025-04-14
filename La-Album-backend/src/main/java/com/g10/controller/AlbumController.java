@@ -30,6 +30,17 @@ public class AlbumController {
         Map<String, Object> userInfo = ThreadLocalUtil.get();
         Long userId = Long.valueOf(userInfo.get("id").toString());
         List<Album> albums = albumService.getAllAlbumsByUserId(userId);
+        
+        // 为每个相册中的每张照片添加签名URL
+        for (Album album : albums) {
+            if (album.getPhotos() != null) {
+                for (Photo photo : album.getPhotos()) {
+                    String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
+                    photo.setUrl(signedUrl);
+                }
+            }
+        }
+        
         return Result.success(albums);
     }
 
@@ -67,6 +78,14 @@ public class AlbumController {
         // 验证相册是否属于当前用户
         if (!album.getUser().getId().equals(userId)) {
             return Result.error("无权访问该相册");
+        }
+        
+        // 为相册中的每张照片添加签名URL
+        if (album.getPhotos() != null) {
+            for (Photo photo : album.getPhotos()) {
+                String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
+                photo.setUrl(signedUrl);
+            }
         }
         
         return Result.success(album);

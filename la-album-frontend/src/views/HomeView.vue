@@ -21,7 +21,7 @@
       <div class="container">
         <div class="section-header">
           <h2>最近的相册</h2>
-          <button class="btn btn-secondary" @click="navigateTo('/album')">查看全部</button>
+          <button class="btn btn-secondary" @click="navigateTo('/albums')">查看全部</button>
         </div>
 
         <div v-if="loading" class="loading-state">
@@ -74,7 +74,7 @@
             <div class="action-text">回收站</div>
           </div>
           
-          <div class="action-card">
+          <div class="action-card" @click="navigateTo('/upload')">
             <div class="action-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -94,51 +94,46 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import AlbumCard from '@/components/album/AlbumCard.vue';
+import { fetchRecentAlbums } from '@/api/album';
+import { ElMessage } from 'element-plus';
 
 const router = useRouter();
 const loading = ref(true);
 const albums = ref([]);
 
-// 模拟数据加载
+// 获取最近相册数据
 onMounted(async () => {
-  // 模拟API调用
-  setTimeout(() => {
-    albums.value = [
-      {
-        id: 1,
-        title: '夏日旅行',
-        description: '2023年暑假的欧洲之旅，收集了各种美丽的风景和难忘的瞬间。',
-        coverUrl: 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 48,
-        createdAt: '2023-07-15T12:00:00Z'
-      },
-      {
-        id: 2,
-        title: '家庭聚会',
-        description: '春节期间与家人的欢乐时光，记录了我们一起制作饺子和看春晚的瞬间。',
-        coverUrl: 'https://images.unsplash.com/photo-1493612276216-ee3925520721?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 36,
-        createdAt: '2023-01-22T18:30:00Z'
-      },
-      {
-        id: 3,
-        title: '毕业典礼',
-        description: '大学毕业典礼的照片集锦，包含了与同学们的合照和校园美景。',
-        coverUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 24,
-        createdAt: '2022-06-30T10:15:00Z'
-      },
-      {
-        id: 4,
-        title: '城市风光',
-        description: '城市建筑和街头摄影作品集，展现都市生活的多样性和活力。',
-        coverUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        photoCount: 52,
-        createdAt: '2023-04-10T14:20:00Z'
-      }
-    ];
+  try {
+    loading.value = true;
+    // 调用API获取最近的相册
+    const recentAlbums = await fetchRecentAlbums(4); // 获取最近的4个相册
+    
+    // 处理返回的数据
+    if (Array.isArray(recentAlbums)) {
+      albums.value = recentAlbums.map(album => {
+        // 添加封面URL (如果相册有照片，使用第一张照片作为封面)
+        const coverUrl = album.photos && album.photos.length > 0 
+          ? album.photos[0].url 
+          : 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
+        
+        // 计算照片数量
+        const photoCount = album.photos ? album.photos.length : 0;
+        
+        return {
+          ...album,
+          coverUrl,
+          photoCount,
+          createdAt: album.createTime // 使用createTime字段作为createdAt
+        };
+      });
+    }
+  } catch (error) {
+    console.error('获取最近相册失败:', error);
+    ElMessage.error('获取相册数据失败，请稍后再试');
+    albums.value = [];
+  } finally {
     loading.value = false;
-  }, 800);
+  }
 });
 
 const navigateTo = (path) => {
@@ -146,8 +141,11 @@ const navigateTo = (path) => {
 };
 
 const createNewAlbum = () => {
-  // 创建相册的逻辑
-  console.log('创建新相册');
+  // 导航到相册列表页并打开创建模式
+  router.push({ 
+    path: '/albums',
+    query: { createNew: 'true' }
+  });
 };
 </script>
 

@@ -4,7 +4,7 @@
       <el-skeleton animated />
     </div>
     
-    <template v-else-if="album">
+    <template v-else-if="album && album.photos">
       <div class="album-header">
         <div class="container">
           <div class="album-info">
@@ -101,26 +101,22 @@ import axios from 'axios';
 const route = useRoute();
 const router = useRouter();
 const loading = ref(true);
-const album = ref({});
+const album = ref(null);
 const selectionMode = ref(false);
 const selectedPhotos = ref([]);
 
 // 获取相册数据
 onMounted(async () => {
   const albumId = parseInt(route.params.id);
+
+  // 获取特定相册的 API 调用
   try {
-    // 调用后端 API 获取相册中的照片
-    const response = await axios.get(`http://localhost:9090/api/albums/${albumId}/photos`, {
-      headers: {
-        Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbXMiOnsiaWQiOjIsInVzZXJuYW1lIjoieWhqMTExIn0sImV4cCI6MTc0NDYzNzA0MX0.GZLUaYnvdf1sj8VdI3f4e3IjZmFZOGeftKDvWTmajJ0' // 替换为实际的令牌
-      }
-    });
-    album.value.photos = response.data.data; // 获取照片列表
-    console.log(album.value.photos )
-  } catch (err) {
-    console.error('Failed to fetch photos:', err);
+    const response = await axios.get(`http://localhost:9090/api/album/${albumId}`);
+    album.value = response.data;
+  } catch (error) {
+    console.error("加载相册数据失败:", error);
   } finally {
-    loading.value = false;
+    loading.value = false;  // 结束加载状态
   }
 });
 
@@ -166,15 +162,14 @@ const editAlbum = () => {
 
 // 上传照片
 const uploadPhotos = () => {
-  // 上传照片的逻辑
-  console.log('上传照片到相册', album.value.id);
+  router.push({
+    name: 'PhotoUpload',
+    query: { albumId: album.value.id }
+  });
 };
 
 // 删除选中的照片
 const deleteSelectedPhotos = () => {
-  // 删除照片的逻辑
-  console.log('删除选中的照片', selectedPhotos.value);
-  // 这里会调用API删除照片，并从当前列表中移除
   album.value.photos = album.value.photos.filter(photo => !selectedPhotos.value.includes(photo.id));
   selectedPhotos.value = [];
   selectionMode.value = false;
@@ -182,7 +177,6 @@ const deleteSelectedPhotos = () => {
 
 // 分享选中的照片
 const shareSelectedPhotos = () => {
-  // 分享照片的逻辑
   console.log('分享选中的照片', selectedPhotos.value);
 };
 
