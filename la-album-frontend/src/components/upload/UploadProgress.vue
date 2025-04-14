@@ -1,5 +1,5 @@
 <template>
-  <div class="upload-progress">
+  <div class="upload-progress" :class="{ 'is-uploading': file.status === 'uploading' }">
     <div class="upload-file-info">
       <div class="file-icon" v-if="!file.thumbnail">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -43,7 +43,7 @@
         </button>
         <button 
           class="action-btn remove" 
-          v-else-if="file.status === 'success'" 
+          v-if="file.status !== 'uploading'"
           @click="removeFile"
           title="移除"
         >
@@ -57,6 +57,7 @@
     
     <div class="progress-bar-container" v-if="file.status === 'uploading'">
       <div class="progress-bar" :style="{ width: `${file.progress}%` }"></div>
+      <div class="progress-text">{{ file.progress }}%</div>
     </div>
     
     <div class="upload-error" v-if="file.status === 'error' && file.errorMessage">
@@ -272,22 +273,38 @@ const removeFile = () => {
   color: var(--primary-color);
 }
 
+.upload-progress.is-uploading {
+  border-left: 3px solid var(--primary-color);
+}
+
 .progress-bar-container {
-  height: 4px;
-  background-color: var(--neutral-200);
-  border-radius: 2px;
   margin-top: var(--space-sm);
+  height: 8px;
+  background-color: var(--neutral-200);
+  border-radius: var(--radius-pill);
   overflow: hidden;
+  position: relative;
 }
 
 .progress-bar {
   height: 100%;
   background-color: var(--primary-color);
-  transition: width 0.2s ease;
+  border-radius: var(--radius-pill);
+  transition: width 0.3s ease-in-out;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.progress-text {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  font-size: 12px;
+  color: var(--neutral-600);
+  font-weight: 500;
 }
 
 .upload-error {
-  margin-top: var(--space-xs);
+  margin-top: var(--space-sm);
   font-size: 0.85rem;
   color: var(--error);
 }
