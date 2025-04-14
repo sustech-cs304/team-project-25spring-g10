@@ -6,7 +6,7 @@ import request from '@/utils/request';
 export const fetchAlbumList = async () => {
   try {
     const response = await request.get('/albums');
-    return response.data;
+    return response; // 返回完整响应
   } catch (error) {
     console.error("获取相册列表失败:", error);
     throw error;
@@ -18,10 +18,10 @@ export const fetchRecentAlbums = async (limit = 4) => {
   try {
     const response = await request.get('/albums');
     // 获取所有相册后，按创建时间排序并限制数量
-    if (response && response.data && Array.isArray(response.data)) {
+    if (response && response.code === 0 && Array.isArray(response.data)) {
       // 按创建时间降序排序
       const sortedAlbums = response.data.sort((a, b) => 
-        new Date(b.createTime) - new Date(a.createTime)
+        new Date(b.createTime || 0) - new Date(a.createTime || 0)
       );
       // 返回指定数量的相册
       return sortedAlbums.slice(0, limit);
@@ -37,7 +37,7 @@ export const fetchRecentAlbums = async (limit = 4) => {
 export const fetchAlbumById = async (albumId) => {
   try {
     const response = await request.get(`/albums/${albumId}`);
-    return response.data;
+    return response; // 返回完整响应，包括code、message和data
   } catch (error) {
     console.error(`获取相册 ${albumId} 详情失败:`, error);
     throw error;
@@ -48,7 +48,7 @@ export const fetchAlbumById = async (albumId) => {
 export const createAlbum = async (albumData) => {
   try {
     const response = await request.post('/albums', albumData);
-    return response.data;
+    return response; // 返回完整响应
   } catch (error) {
     console.error("创建相册失败:", error);
     throw error;
@@ -59,7 +59,7 @@ export const createAlbum = async (albumData) => {
 export const updateAlbum = async (albumId, albumData) => {
   try {
     const response = await request.put(`/albums/${albumId}`, albumData);
-    return response.data;
+    return response; // 返回完整响应
   } catch (error) {
     console.error(`更新相册 ${albumId} 失败:`, error);
     throw error;
@@ -70,7 +70,7 @@ export const updateAlbum = async (albumId, albumData) => {
 export const deleteAlbum = async (albumId) => {
   try {
     const response = await request.delete(`/albums/${albumId}`);
-    return response.data;
+    return response; // 返回完整响应
   } catch (error) {
     console.error(`删除相册 ${albumId} 失败:`, error);
     throw error;
@@ -81,7 +81,7 @@ export const deleteAlbum = async (albumId) => {
 export const fetchPhotosInAlbum = async (albumId) => {
   try {
     const response = await request.get(`/albums/${albumId}/photos`);
-    return response.data;
+    return response; // 返回完整响应
   } catch (error) {
     console.error(`获取相册 ${albumId} 中的照片失败:`, error);
     throw error;

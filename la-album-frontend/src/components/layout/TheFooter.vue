@@ -16,7 +16,7 @@
         <div class="footer-links">
           <ul class="footer-nav">
             <li><router-link to="/">首页</router-link></li>
-            <li><router-link to="/album">相册</router-link></li>
+            <li><router-link to="/albums">相册</router-link></li>
             <li><router-link to="/search">搜索</router-link></li>
             <li><router-link to="/trash">回收站</router-link></li>
           </ul>
