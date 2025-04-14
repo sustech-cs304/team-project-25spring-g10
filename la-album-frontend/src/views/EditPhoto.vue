@@ -145,6 +145,7 @@
 
 <script>
 import ImageEditor from '@/components/ImageEditor.vue';
+import { photoApi, albumApi } from '@/api';
 
 export default {
   name: 'EditPhoto',

@@ -87,7 +87,7 @@ const handleClick = () => {
 
 const viewPhoto = () => {
   emit('view', props.photo.id);
-  router.push({ name: 'SharePhoto', params: { id: props.photo.id } });
+  router.push({ name: 'ViewPhoto', params: { id: props.photo.id } });
 };
 
 const editPhoto = () => {
