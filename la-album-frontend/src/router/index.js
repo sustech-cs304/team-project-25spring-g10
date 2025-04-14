@@ -10,6 +10,7 @@ import SharePhoto from '../views/SharePhoto.vue';
 import TrashBin from '../views/TrashBin.vue';
 import PhotoUploadEdit from '../views/PhotoUploadEdit.vue';
 import LoginView from '../views/LoginView.vue';
+import RegisterView from '../views/RegisterView.vue';
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
@@ -22,6 +23,7 @@ const routes = [
   { path: '/trash', name: 'TrashBin', component: TrashBin },
   { path: '/upload', name: 'PhotoUpload', component: PhotoUploadEdit },
   { path: '/login', name: 'Login', component: LoginView },
+  { path: '/register', name: 'Register', component: RegisterView },
 ];
 
 const router = createRouter({
