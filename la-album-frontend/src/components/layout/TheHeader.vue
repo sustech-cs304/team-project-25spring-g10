@@ -40,7 +40,47 @@
             </svg>
           </button>
           
-          <div class="dropdown">
+          <!-- 用户未登录显示登录按钮 -->
+          <router-link to="/login" class="btn btn-secondary" v-if="!isLoggedIn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10 17 15 12 10 7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+            登录
+          </router-link>
+          
+          <!-- 用户已登录显示用户菜单 -->
+          <div class="user-dropdown" v-if="isLoggedIn">
+            <button class="user-dropdown-btn" @click="toggleUserDropdown">
+              <div class="user-avatar">
+                {{ usernameInitial }}
+              </div>
+              <span class="username">{{ username }}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="user-dropdown-content" v-show="userDropdownOpen">
+              <a href="#" @click.prevent="navigateToProfile">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                个人信息
+              </a>
+              <a href="#" @click.prevent="handleLogout">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                退出登录
+              </a>
+            </div>
+          </div>
+          
+          <div class="dropdown" v-if="isLoggedIn">
             <button class="btn btn-primary" @click="toggleDropdown">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -103,12 +143,27 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { logout } from '@/api/user';
 
 const route = useRoute();
 const router = useRouter();
 const currentRoute = computed(() => route.path);
 const mobileMenuOpen = ref(false);
 const dropdownOpen = ref(false);
+const userDropdownOpen = ref(false);
+
+// 获取用户登录状态和信息
+const isLoggedIn = ref(localStorage.getItem('userLoggedIn') === 'true');
+const username = ref(localStorage.getItem('username') || '');
+const usernameInitial = computed(() => {
+  return username.value ? username.value.charAt(0).toUpperCase() : '';
+});
+
+// 监听 localStorage 变化
+const checkLoginStatus = () => {
+  isLoggedIn.value = localStorage.getItem('userLoggedIn') === 'true';
+  username.value = localStorage.getItem('username') || '';
+};
 
 // 深色模式状态
 const isDarkMode = ref(localStorage.getItem('darkMode') === 'true');
@@ -124,24 +179,82 @@ const toggleDarkMode = () => {
 const toggleDropdown = (event) => {
   event.stopPropagation();
   dropdownOpen.value = !dropdownOpen.value;
+  if (dropdownOpen.value) userDropdownOpen.value = false;
+};
+
+// 切换用户菜单显示状态
+const toggleUserDropdown = (event) => {
+  event.stopPropagation();
+  userDropdownOpen.value = !userDropdownOpen.value;
+  if (userDropdownOpen.value) dropdownOpen.value = false;
 };
 
 // 点击页面其他区域关闭下拉菜单
-const closeDropdown = (event) => {
+const closeDropdowns = (event) => {
   const dropdown = document.querySelector('.dropdown');
+  const userDropdown = document.querySelector('.user-dropdown');
+  
   if (dropdown && !dropdown.contains(event.target)) {
     dropdownOpen.value = false;
   }
+  
+  if (userDropdown && !userDropdown.contains(event.target)) {
+    userDropdownOpen.value = false;
+  }
+};
+
+// 退出登录
+const handleLogout = async () => {
+  try {
+    // 调用登出接口
+    await logout();
+    // 清除本地存储并重定向到登录页
+    localStorage.removeItem('token');
+    localStorage.removeItem('userLoggedIn');
+    localStorage.removeItem('username');
+    
+    // 刷新登录状态
+    checkLoginStatus();
+    
+    // 重定向到登录页
+    router.push('/login');
+  } catch (error) {
+    console.error('登出失败:', error);
+    // 即使API调用失败，也清除本地登录状态
+    localStorage.removeItem('token');
+    localStorage.removeItem('userLoggedIn');
+    localStorage.removeItem('username');
+    
+    // 刷新登录状态
+    checkLoginStatus();
+    
+    // 重定向到登录页
+    router.push('/login');
+  }
+};
+
+// 导航到个人信息页面
+const navigateToProfile = () => {
+  // 关闭用户菜单
+  userDropdownOpen.value = false;
+  // 导航到个人信息页面，暂时未实现，可以根据需要添加
+  console.log('导航到个人信息页面');
 };
 
 // 监听全局点击事件
 onMounted(() => {
-  document.addEventListener('click', closeDropdown);
+  document.addEventListener('click', closeDropdowns);
+  // 页面加载时检查登录状态
+  checkLoginStatus();
+  
+  // 创建 storage 事件监听器
+  window.addEventListener('storage', checkLoginStatus);
 });
 
 // 组件销毁前移除事件监听
 onBeforeUnmount(() => {
-  document.removeEventListener('click', closeDropdown);
+  document.removeEventListener('click', closeDropdowns);
+  window.removeEventListener('storage', checkLoginStatus);
 });
 
 // 切换移动端菜单
@@ -390,5 +503,96 @@ if (isDarkMode.value) {
   body.menu-open {
     overflow: hidden;
   }
+}
+
+/* 用户下拉菜单 */
+.user-dropdown {
+  position: relative;
+  margin-right: var(--space-md);
+}
+
+.user-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  color: var(--neutral-800);
+  font-weight: 500;
+  cursor: pointer;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+}
+
+.user-dropdown-btn:hover {
+  background-color: var(--neutral-200);
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  font-weight: 600;
+}
+
+.username {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-dropdown-content {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: var(--neutral-100);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
+  min-width: 150px;
+  z-index: 1;
+  margin-top: var(--space-xs);
+  overflow: hidden;
+}
+
+.user-dropdown-content a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  color: var(--neutral-800);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.user-dropdown-content a:hover {
+  background-color: var(--neutral-200);
+}
+
+/* 深色模式适配 */
+.dark-mode .user-dropdown-btn {
+  color: var(--neutral-700);
+}
+
+.dark-mode .user-dropdown-btn:hover {
+  background-color: var(--neutral-200);
+}
+
+.dark-mode .user-dropdown-content {
+  background-color: var(--neutral-100);
+}
+
+.dark-mode .user-dropdown-content a {
+  color: var(--neutral-700);
+}
+
+.dark-mode .user-dropdown-content a:hover {
+  background-color: var(--neutral-200);
 }
 </style> 
