@@ -7,6 +7,7 @@ import com.g10.model.User;
 import com.g10.service.AlbumService;
 import com.g10.service.UserService;
 import com.g10.utils.ThreadLocalUtil;
+import com.g10.utils.OssUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class AlbumController {
 
     private final AlbumService albumService;
     private final UserService userService;
+    private final OssUtil ossUtil;
 
     // 获取所有相册
     @GetMapping
@@ -111,6 +113,13 @@ public class AlbumController {
         }
         
         List<Photo> photos = albumService.getPhotosInAlbum(albumId);
+        
+        // 为每个照片生成签名URL
+        for (Photo photo : photos) {
+            String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
+            photo.setUrl(signedUrl);
+        }
+        
         return Result.success(photos);
     }
 
