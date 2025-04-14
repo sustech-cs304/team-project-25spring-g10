@@ -19,6 +19,7 @@
             <li><router-link to="/albums" class="nav-link" :class="{ 'active': currentRoute.includes('/album') }">相册管理</router-link></li>
             <li><router-link to="/search" class="nav-link" :class="{ 'active': currentRoute === '/search' }">搜索照片</router-link></li>
             <li><router-link to="/trash" class="nav-link" :class="{ 'active': currentRoute === '/trash' }">回收站</router-link></li>
+            <li><router-link to="/people" class="nav-link" :class="{ 'active': currentRoute === '/people' }">Faces</router-link></li>
           </ul>
         </nav>
         
@@ -41,14 +42,14 @@
           </button>
           
           <div class="dropdown">
-            <button class="btn btn-primary" @click="toggleDropdown">
+            <button class="btn btn-primary">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
               新建
             </button>
-            <div class="dropdown-content" v-show="dropdownOpen">
+            <div class="dropdown-content">
               <a @click="createNewAlbum">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -101,14 +102,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, computed } from 'vue';
+import { useRoute } from 'vue-router';
 
 const route = useRoute();
-const router = useRouter();
 const currentRoute = computed(() => route.path);
 const mobileMenuOpen = ref(false);
-const dropdownOpen = ref(false);
 
 // 深色模式状态
 const isDarkMode = ref(localStorage.getItem('darkMode') === 'true');
@@ -119,30 +118,6 @@ const toggleDarkMode = () => {
   document.body.classList.toggle('dark-mode', isDarkMode.value);
   localStorage.setItem('darkMode', isDarkMode.value);
 };
-
-// 切换下拉菜单显示状态
-const toggleDropdown = (event) => {
-  event.stopPropagation();
-  dropdownOpen.value = !dropdownOpen.value;
-};
-
-// 点击页面其他区域关闭下拉菜单
-const closeDropdown = (event) => {
-  const dropdown = document.querySelector('.dropdown');
-  if (dropdown && !dropdown.contains(event.target)) {
-    dropdownOpen.value = false;
-  }
-};
-
-// 监听全局点击事件
-onMounted(() => {
-  document.addEventListener('click', closeDropdown);
-});
-
-// 组件销毁前移除事件监听
-onBeforeUnmount(() => {
-  document.removeEventListener('click', closeDropdown);
-});
 
 // 切换移动端菜单
 const toggleMobileMenu = () => {
@@ -163,20 +138,15 @@ const closeMobileMenu = () => {
 // 创建新相册
 const createNewAlbum = () => {
   closeMobileMenu();
-  dropdownOpen.value = false;
-  // 导航到相册列表页并打开创建模式
-  router.push({ 
-    path: '/albums',
-    query: { createNew: 'true' }
-  });
+  console.log('创建新相册');
+  // 将来会打开创建相册的对话框或导航到创建页面
 };
 
 // 上传照片
 const uploadPhotos = () => {
   closeMobileMenu();
-  dropdownOpen.value = false;
-  // 导航到上传页面
-  router.push({ name: 'PhotoUpload' });
+  console.log('上传照片');
+  // 将来会打开上传照片的对话框或导航到上传页面
 };
 
 // 初始应用深色模式
@@ -282,6 +252,7 @@ if (isDarkMode.value) {
 }
 
 .dropdown-content {
+  display: none;
   position: absolute;
   right: 0;
   min-width: 160px;
@@ -293,6 +264,10 @@ if (isDarkMode.value) {
   padding: var(--space-xs) 0;
 }
 
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
 .dropdown-content a {
   display: flex;
   align-items: center;
@@ -301,6 +276,11 @@ if (isDarkMode.value) {
   color: var(--neutral-800);
   cursor: pointer;
   text-decoration: none;
+}
+
+.dropdown-content a:hover {
+  background-color: var(--neutral-100);
+  color: var(--primary-color);
 }
 
 /* 移动端菜单样式 */

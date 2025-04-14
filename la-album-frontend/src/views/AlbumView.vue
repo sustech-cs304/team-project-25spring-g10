@@ -4,7 +4,7 @@
       <el-skeleton animated />
     </div>
     
-    <template v-else-if="album && album.photos">
+    <template v-else-if="album">
       <div class="album-header">
         <div class="container">
           <div class="album-info">
@@ -108,15 +108,19 @@ const selectedPhotos = ref([]);
 // 获取相册数据
 onMounted(async () => {
   const albumId = parseInt(route.params.id);
-
-  // 获取特定相册的 API 调用
   try {
-    const response = await axios.get(`http://localhost:9090/api/album/${albumId}`);
-    album.value = response.data;
-  } catch (error) {
-    console.error("加载相册数据失败:", error);
+    // 调用后端 API 获取相册中的照片
+    const response = await axios.get(`http://localhost:9090/api/albums/${albumId}/photos`, {
+      headers: {
+        Authorization: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbXMiOnsiaWQiOjIsInVzZXJuYW1lIjoieWhqMTExIn0sImV4cCI6MTc0NDU1Njc0MX0.pqNhtdAi8RjOk4-YTReJHJBFkbwrEjbR4YAheqk7CPM' // 替换为实际的令牌
+      }
+    });
+    console.log(response.data.data) // 假设后端返回的数据结构为 { data: [...] }
+    album.value.photos = response.data.data; // 获取照片列表
+  } catch (err) {
+    console.error('Failed to fetch photos:', err);
   } finally {
-    loading.value = false;  // 结束加载状态
+    loading.value = false;
   }
 });
 
@@ -162,14 +166,15 @@ const editAlbum = () => {
 
 // 上传照片
 const uploadPhotos = () => {
-  router.push({
-    name: 'PhotoUpload',
-    query: { albumId: album.value.id }
-  });
+  // 上传照片的逻辑
+  console.log('上传照片到相册', album.value.id);
 };
 
 // 删除选中的照片
 const deleteSelectedPhotos = () => {
+  // 删除照片的逻辑
+  console.log('删除选中的照片', selectedPhotos.value);
+  // 这里会调用API删除照片，并从当前列表中移除
   album.value.photos = album.value.photos.filter(photo => !selectedPhotos.value.includes(photo.id));
   selectedPhotos.value = [];
   selectionMode.value = false;
@@ -177,6 +182,7 @@ const deleteSelectedPhotos = () => {
 
 // 分享选中的照片
 const shareSelectedPhotos = () => {
+  // 分享照片的逻辑
   console.log('分享选中的照片', selectedPhotos.value);
 };
 

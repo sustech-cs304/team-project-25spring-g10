@@ -88,6 +88,7 @@ const deleteAlbum = () => {
   position: relative;
   aspect-ratio: 4/3;
   overflow: hidden;
+  /* border-radius: 40%; 圆形 */
 }
 
 .album-cover img {

@@ -97,68 +97,11 @@
         </div>
       </div>
     </div>
-
-    <!-- 创建相册对话框 -->
-    <div class="modal" v-if="showCreateAlbumModal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>创建新相册</h3>
-          <button class="close-btn" @click="showCreateAlbumModal = false">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="album-title">相册标题</label>
-            <input 
-              type="text" 
-              id="album-title" 
-              v-model="newAlbum.title" 
-              placeholder="输入相册标题"
-            >
-          </div>
-          
-          <div class="form-group">
-            <label for="album-description">相册描述</label>
-            <textarea 
-              id="album-description" 
-              v-model="newAlbum.description" 
-              placeholder="添加相册描述"
-              rows="3"
-            ></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showCreateAlbumModal = false">取消</button>
-          <button 
-            class="btn btn-primary" 
-            @click="saveNewAlbum"
-            :disabled="!newAlbum.title || isCreatingAlbum"
-          >
-            <svg v-if="isCreatingAlbum" class="spin-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="2" x2="12" y2="6"></line>
-              <line x1="12" y1="18" x2="12" y2="22"></line>
-              <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
-              <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
-              <line x1="2" y1="12" x2="6" y2="12"></line>
-              <line x1="18" y1="12" x2="22" y2="12"></line>
-              <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
-              <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
-            </svg>
-            创建相册
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 import AlbumCard from '@/components/album/AlbumCard.vue';
 
 const loading = ref(true);
@@ -167,23 +110,9 @@ const searchQuery = ref('');
 const sortOption = ref('newest');
 const currentPage = ref(1);
 const pageSize = 12;
-const showCreateAlbumModal = ref(false);
-const newAlbum = ref({ title: '', description: '' });
-const isCreatingAlbum = ref(false);
-
-// 获取路由参数
-const route = useRoute();
-const router = useRouter();
 
 // 获取所有相册数据
 onMounted(async () => {
-  // 检查是否需要打开创建相册对话框
-  if (route.query.createNew === 'true') {
-    showCreateAlbumModal.value = true;
-    // 清除URL参数以避免刷新页面时再次打开
-    router.replace({ path: route.path });
-  }
-  
   // 模拟API调用
   setTimeout(() => {
     // 这里将来会替换为真实的API调用
@@ -325,39 +254,8 @@ const changePage = (page) => {
 
 // 创建新相册
 const createNewAlbum = () => {
-  showCreateAlbumModal.value = true;
-};
-
-// 保存新相册
-const saveNewAlbum = async () => {
-  isCreatingAlbum.value = true;
-  try {
-    // 这里将来会替换为真实的API调用
-    setTimeout(() => {
-      const newId = Math.max(0, ...albums.value.map(a => a.id)) + 1;
-      const newAlbumData = {
-        id: newId,
-        title: newAlbum.value.title,
-        description: newAlbum.value.description,
-        coverUrl: 'https://images.unsplash.com/photo-1533669955142-6a73332af4db?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // 默认封面
-        photoCount: 0,
-        createdAt: new Date().toISOString()
-      };
-      albums.value.unshift(newAlbumData); // 添加到列表开头
-      showCreateAlbumModal.value = false;
-      newAlbum.value = { title: '', description: '' };
-      isCreatingAlbum.value = false;
-      
-      // 如果正在按最新排序，不需要重新排序
-      // 对于其他排序方式，可能需要重新应用排序
-      if (sortOption.value !== 'newest') {
-        filterAlbums();
-      }
-    }, 1000); // 模拟网络延迟
-  } catch (error) {
-    console.error('创建相册失败', error);
-    isCreatingAlbum.value = false;
-  }
+  // 创建相册的逻辑
+  console.log('创建新相册');
 };
 </script>
 
@@ -487,97 +385,6 @@ const saveNewAlbum = async () => {
 
 .loading-state {
   padding: var(--space-lg);
-}
-
-/* 模态框样式 */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.modal-content {
-  background-color: white;
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 500px;
-  box-shadow: var(--shadow-lg);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-lg);
-  border-bottom: 1px solid var(--neutral-200);
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: var(--neutral-900);
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--neutral-500);
-}
-
-.close-btn:hover {
-  color: var(--neutral-700);
-}
-
-.modal-body {
-  padding: var(--space-lg);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-md);
-  padding: var(--space-lg);
-  border-top: 1px solid var(--neutral-200);
-}
-
-.form-group {
-  margin-bottom: var(--space-lg);
-}
-
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: var(--space-sm);
-  color: var(--neutral-700);
-  font-weight: 500;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: var(--space-sm);
-  border: 1px solid var(--neutral-300);
-  border-radius: var(--radius-sm);
-  background-color: white;
-}
-
-.spin-icon {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {
