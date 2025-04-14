@@ -6,7 +6,8 @@ import request from '@/utils/request';
 export const fetchAlbumList = async () => {
   try {
     const response = await request.get('/albums');
-    return response; // 返回完整响应
+    // response已经被响应拦截器处理过，如果code === 0，则返回的是response.data
+    return response.data || []; // 如果data为空，返回空数组
   } catch (error) {
     console.error("获取相册列表失败:", error);
     throw error;
