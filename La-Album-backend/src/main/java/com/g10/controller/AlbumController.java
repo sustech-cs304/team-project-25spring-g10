@@ -19,6 +19,7 @@ public class AlbumController {
     // 获取所有相册
     @GetMapping
     public ResponseEntity<List<Album>> getAllAlbums() {
+        System.out.println("received get all album require.");
         List<Album> albums = albumService.getAllAlbums();
         return ResponseEntity.ok(albums);
     }
@@ -26,6 +27,7 @@ public class AlbumController {
     // 创建相册
     @PostMapping
     public ResponseEntity<Album> createAlbum(@RequestBody Album album) {
+        System.out.println("received create album require.");
         Album created = albumService.createAlbum(album);
         return ResponseEntity.ok(created);
     }
@@ -33,6 +35,7 @@ public class AlbumController {
     // 根据ID获取相册
     @GetMapping("/{id}")
     public ResponseEntity<Album> getAlbumById(@PathVariable Long id) {
+        System.out.println("received get album by ID.");
         Album album = albumService.getAlbumById(id);
         if (album == null) {
             throw new RuntimeException("Album not found with ID: " + id);
@@ -43,6 +46,7 @@ public class AlbumController {
     // 更新相册
     @PutMapping("/{id}")
     public ResponseEntity<Album> updateAlbum(@PathVariable Long id, @RequestBody Album updatedAlbum) {
+        System.out.println("received update album");
         Album result = albumService.updateAlbum(id, updatedAlbum);
         if (result == null) {
             throw new RuntimeException("Failed to update album. Album not found with ID: " + id);
@@ -53,6 +57,7 @@ public class AlbumController {
     // 获取相册中的所有照片
     @GetMapping("/{albumId}/photos")
     public ResponseEntity<List<Photo>> getPhotosInAlbum(@PathVariable Long albumId) {
+        System.out.println("received get photos in album");
         List<Photo> photos = albumService.getPhotosInAlbum(albumId);
         if (photos == null || photos.isEmpty()) {
             throw new RuntimeException("No photos found for album ID: " + albumId);
