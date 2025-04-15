@@ -52,20 +52,33 @@ def fetch_photos():
     try:
         # 设置 Authorization 头
         headers = {
-            'Authorization': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbXMiOnsiaWQiOjIsInVzZXJuYW1lIjoieWhqMTExIn0sImV4cCI6MTc0NDYzMzU3Nn0.aU1ybZKfleEczrjovloLZ802ZvTxDYS0RUwA8bGlTs4'  # 替换 YOUR_ACCESS_TOKEN 为实际的令牌
+            'Authorization': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGFpbXMiOnsiaWQiOjIsInVzZXJuYW1lIjoieWhqMTExIn0sImV4cCI6MTc0NDY1MDk1OH0.4YfJvZtsY5SaYZVIFh2ylSjwg0fvZMyymoBIM3ehCKI'  # 替换 YOUR_ACCESS_TOKEN 为实际的令牌
         }
 
         # Fetch photo metadata from the given URL with Authorization header
-        response = requests.get('http://localhost:9090/api/photo', headers=headers)
+        response = requests.get('http://localhost:9090/api/albums', headers=headers)
         
 
-        photos = response.json()
+        albums = response.json().get('data',[])
+        
+        photo_album_mapping = []  # 存储照片 id 和 album id 的键值对
+        for album in albums:
+            album_id = album['id']
+            for photo in album.get('photos', []):
+                photo_id = photo['id']
+                photo_url = photo['url']
+                photo_album_mapping.append({
+                    'photoId': photo_id,
+                    'albumId': album_id,
+                    'photoUrl': photo_url
+                })
+
 
         results = []
         aligned = []
         embeddings = []
-        for photo in photos:
-            image_url = photo.get('url')
+        for photo in photo_album_mapping:
+            image_url = photo.get('photoUrl')
             # Download the image
             image_response = requests.get(image_url)
 
@@ -98,9 +111,87 @@ def fetch_photos():
         for i, label in enumerate(labels):
             print(f"Embedding {i} belongs to cluster {label}")
 
-        return photos
+        return response.json()
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+
+@app.route('/auto_class', methods=['POST'])
+def auto_class():
+    try:
+        data = request.json
+        new_url = data.get('photoUrl')  # 获取传入的 URL
+        token = data.get('token')  # 获取传入的 token
+        # 设置 Authorization 头
+        headers = {
+            'Authorization': token
+        }
+
+        # Fetch photo metadata from the given URL with Authorization header
+        response = requests.get('http://localhost:9090/api/albums', headers=headers)
+        
+   
+        albums = response.json().get('data',[])
+        
+        photo_album_mapping = []  # 存储照片 id 和 album id 的键值对
+        for album in albums:
+            album_id = album['id']
+            for photo in album.get('photos', []):
+                photo_id = photo['id']
+                photo_url = photo['url']
+                photo_album_mapping.append({
+                    'photoId': photo_id,
+                    'albumId': album_id,
+                    'photoUrl': photo_url
+                })
+        photo_album_mapping.append({
+                    'photoId': 0,
+                    'albumId': 0,
+                    'photoUrl': photo_url
+                })
+
+        results = []
+        aligned = []
+        embeddings = []
+        # 获取传入图片的url
+        for photo in photo_album_mapping:
+            image_url = photo.get('photoUrl')
+            # Download the image
+            image_response = requests.get(image_url)
+
+            image = Image.open(io.BytesIO(image_response.content)).convert('RGB')
+
+            # Detect faces
+            x_aligned, probs = mtcnn(image,return_prob=True)
+           
+            if x_aligned is not None:
+                print('检测到的人脸及其概率: {:8f}'.format(probs))
+                aligned.append(x_aligned)
+                # names.append(dataset.idx_to_class[y])
+
+        aligned = torch.stack(aligned).to(device)
+
+        embeddings = resnet(aligned).detach().cpu()
+
+        last_embedding = embeddings[-1]
+
+        dists = [(last_embedding - e).norm().item() for e in embeddings[:-1]]
+
+        index = np.argmin(dists) 
+
+        print(index)
+
+        album_id = photo_album_mapping[index]['albumId']
+
+        print(album_id)
+
+        return jsonify({"albumId": album_id}), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=7777, debug=True, threaded=True)

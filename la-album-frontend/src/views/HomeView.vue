@@ -106,7 +106,7 @@ onMounted(async () => {
   try {
     loading.value = true;
     // 调用API获取最近的相册
-    const recentAlbums = await fetchRecentAlbums(4); // 获取最近的4个相册
+    const recentAlbums = await fetchRecentAlbums(6); // 获取最近的4个相册
     console.log('获取最近相册返回:', recentAlbums);
     
     // 处理返回的数据

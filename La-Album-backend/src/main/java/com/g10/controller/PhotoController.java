@@ -65,6 +65,7 @@ public class PhotoController {
             // 上传到OSS
             String url = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
             
+        
             // 创建照片记录
             Photo photo = new Photo();
             photo.setTitle(file.getOriginalFilename());

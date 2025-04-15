@@ -1,10 +1,11 @@
 import axios from "axios";
+import request from '@/utils/request';
 
 const BASE_URL = "http://localhost:9090/api/photo"; 
 
 export const getPhotoById = async (id) => {
   try {
-    const response = await axios.get(`${BASE_URL}/${id}`);
+    const response = await request.get(`/photo/${id}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching photo:", error);
