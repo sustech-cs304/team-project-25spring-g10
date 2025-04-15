@@ -395,11 +395,13 @@ const uploadFile = async (file) => {
     //   console.log('111111',photoId)
     //   //自动识别人脸并加到相应相册
     //   const response2= await getPhotoById(35);
+    else{
       const url = "http://big-event-isaac.oss-cn-beijing.aliyuncs.com/81b338b6-4e58-45bf-8a1f-7dbbbec6a178.jpg?Expires=1744655235&OSSAccessKeyId=LTAI5tEnZ1ZE7QNq1fbRp2RC&Signature=r8LcVI3HxL1JMx3hO5osv%2BVPFXk%3D";
       
       const response2 = await autoClassifyPhotos(url);
       console.log('222222',response2)
-      await uploadFunction(file.file, 5, uploadOptions);
+      await uploadFunction(file.file, 2, uploadOptions);
+    }
       
 
       // 处理响应
