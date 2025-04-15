@@ -5,26 +5,30 @@ import com.g10.repository.AlbumRepository;
 import com.g10.repository.PhotoRepository;
 import com.g10.repository.TrashedPhotoRepository;
 import jakarta.transaction.Transactional;
-import org.jline.reader.LineReader;
-import org.jline.reader.LineReaderBuilder;
 import org.springframework.stereotype.Service;
 
-import java.awt.desktop.OpenURIEvent;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class AlbumService {
     private final AlbumRepository albumRepository;
-    private PhotoRepository photoRepository;
-    private TrashedPhotoRepository trashedPhotoRepository;
+    private final PhotoRepository photoRepository;
+    private final TrashedPhotoRepository trashedPhotoRepository;
 
-    public AlbumService(AlbumRepository albumRepository) {
+    public AlbumService(AlbumRepository albumRepository, 
+                       PhotoRepository photoRepository,
+                       TrashedPhotoRepository trashedPhotoRepository) {
         this.albumRepository = albumRepository;
+        this.photoRepository = photoRepository;
+        this.trashedPhotoRepository = trashedPhotoRepository;
     }
 
     public List<Album> getAllAlbums() {
         return albumRepository.findAll();
+    }
+
+    public List<Album> getAllAlbumsByUserId(Long userId) {
+        return albumRepository.findByUserId(userId);
     }
 
     public Album createAlbum(Album album) {

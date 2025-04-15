@@ -1,14 +1,46 @@
-import axios from "axios";
+import request from '@/utils/request';
 
-const BASE_URL = "http://localhost:9090/api/album"; // Spring Boot 后端地址
 
-// 获取相册列表
+
+// 获取所有相册
 export const fetchAlbumList = async () => {
   try {
-    const response = await axios.get(BASE_URL);
-    return response.data;  // 返回相册列表
+    const response = await request.get('/albums');
+    // response已经被响应拦截器处理过，如果code === 0，则返回的是response.data
+    return response.data || []; // 如果data为空，返回空数组
   } catch (error) {
-    console.error("Error fetching albums:", error);
+    console.error("获取相册列表失败:", error);
+    throw error;
+  }
+};
+
+// 获取最近的相册（限制数量）
+export const fetchRecentAlbums = async (limit = 4) => {
+  try {
+    const response = await request.get('/albums');
+    // 获取所有相册后，按创建时间排序并限制数量
+    if (response && response.code === 0 && Array.isArray(response.data)) {
+      // 按创建时间降序排序
+      const sortedAlbums = response.data.sort((a, b) => 
+        new Date(b.createTime || 0) - new Date(a.createTime || 0)
+      );
+      // 返回指定数量的相册
+      return sortedAlbums.slice(0, limit);
+    }
+    return [];
+  } catch (error) {
+    console.error("获取最近相册失败:", error);
+    throw error;
+  }
+};
+
+// 获取单个相册详情
+export const fetchAlbumById = async (albumId) => {
+  try {
+    const response = await request.get(`/albums/${albumId}`);
+    return response; // 返回完整响应，包括code、message和data
+  } catch (error) {
+    console.error(`获取相册 ${albumId} 详情失败:`, error);
     throw error;
   }
 };
@@ -16,10 +48,10 @@ export const fetchAlbumList = async () => {
 // 创建新相册
 export const createAlbum = async (albumData) => {
   try {
-    const response = await axios.post(BASE_URL, albumData);
-    return response.data;  // 返回创建的相册
+    const response = await request.post('/albums', albumData);
+    return response; // 返回完整响应
   } catch (error) {
-    console.error("Error creating album:", error);
+    console.error("创建相册失败:", error);
     throw error;
   }
 };
@@ -27,10 +59,10 @@ export const createAlbum = async (albumData) => {
 // 更新相册
 export const updateAlbum = async (albumId, albumData) => {
   try {
-    const response = await axios.put(`${BASE_URL}/${albumId}`, albumData);
-    return response.data;  // 返回更新后的相册
+    const response = await request.put(`/albums/${albumId}`, albumData);
+    return response; // 返回完整响应
   } catch (error) {
-    console.error("Error updating album:", error);
+    console.error(`更新相册 ${albumId} 失败:`, error);
     throw error;
   }
 };
@@ -38,32 +70,21 @@ export const updateAlbum = async (albumId, albumData) => {
 // 删除相册
 export const deleteAlbum = async (albumId) => {
   try {
-    const response = await axios.delete(`${BASE_URL}/${albumId}`);
-    return response.data;  // 返回删除的响应，通常是空
+    const response = await request.delete(`/albums/${albumId}`);
+    return response; // 返回完整响应
   } catch (error) {
-    console.error("Error deleting album:", error);
+    console.error(`删除相册 ${albumId} 失败:`, error);
     throw error;
   }
 };
 
-
-// 获取指定 ID 的相册
-export const fetchAlbumById = async (albumId) => {
-  try {
-    const response = await axios.get(`${BASE_URL}/${albumId}`);
-    return response.data;  // 返回相册数据
-  } catch (error) {
-    console.error("Error fetching album by ID:", error);
-    throw error;  // 抛出错误，以便上层处理
-  }
-};
-
+// 获取相册中的所有照片
 export const fetchPhotosInAlbum = async (albumId) => {
   try {
-    const response = await axios.get(`${BASE_URL}/${albumId}/photos`);
-    return response.data;  // 返回相册中的所有照片
+    const response = await request.get(`/albums/${albumId}/photos`);
+    return response; // 返回完整响应
   } catch (error) {
-    console.error("Error fetching photos in album:", error);
-    throw error;  // 抛出错误，以便上层处理
+    console.error(`获取相册 ${albumId} 中的照片失败:`, error);
+    throw error;
   }
 };

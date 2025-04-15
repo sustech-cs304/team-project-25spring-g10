@@ -6,6 +6,8 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 @Entity
 @Table(name = "photos")
 @Data // 使用 Lombok 生成 getter、setter、toString
@@ -28,6 +30,7 @@ public class Photo {
 
     @ManyToOne
     @JoinColumn(name = "album_id")
+    @JsonBackReference
     private Album album;
 
     @PrePersist

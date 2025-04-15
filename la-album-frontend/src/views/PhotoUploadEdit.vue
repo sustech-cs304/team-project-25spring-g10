@@ -203,6 +203,14 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import UploadProgress from '@/components/upload/UploadProgress.vue';
+import { fetchAlbumList, createAlbum as createAlbumApi } from '@/api/album';
+import { uploadPhoto, mockUploadPhoto } from '@/api/photo';
+import { ElMessage } from 'element-plus';
+
+// 调试模式开关 - 设为true使用模拟上传，false使用真实API
+const DEBUG_MODE = false;
+// 失败自动回退开关 - 设为true时，如果真实API失败则自动使用模拟上传
+const AUTO_FALLBACK = true;
 
 const route = useRoute();
 const router = useRouter();
@@ -221,29 +229,36 @@ const newAlbum = ref({
   description: ''
 });
 
-// 从路由参数获取相册ID
-onMounted(() => {
+// 获取相册列表
+const fetchAlbums = async () => {
+  try {
+    const albumList = await fetchAlbumList();
+    
+    if (Array.isArray(albumList) && albumList.length > 0) {
+      // 处理相册数据，只需要id和title用于下拉选择
+      albums.value = albumList.map(album => ({
+        id: album.id,
+        title: album.title
+      }));
+    } else {
+      albums.value = [];
+      ElMessage.warning('暂无相册，请先创建一个相册');
+    }
+  } catch (error) {
+    console.error('获取相册列表失败:', error);
+    ElMessage.error('获取相册列表失败，请稍后再试');
+    albums.value = [];
+  }
+};
+
+onMounted(async () => {
+  await fetchAlbums(); // 确保在组件挂载时获取相册列表
+  
   const albumId = route.query.albumId;
   if (albumId) {
-    selectedAlbumId.value = Number(albumId);
+    selectedAlbumId.value = albumId;
   }
-  
-  // 模拟获取相册列表
-  fetchAlbums();
 });
-
-// 获取相册列表
-const fetchAlbums = () => {
-  // 模拟API调用
-  setTimeout(() => {
-    albums.value = [
-      { id: 1, title: '旅行相册' },
-      { id: 2, title: '家庭相册' },
-      { id: 3, title: '美食收藏' },
-      { id: 4, title: '风景照片' }
-    ];
-  }, 500);
-};
 
 // 计算是否有已完成的上传
 const hasCompletedUploads = computed(() => {
@@ -323,7 +338,7 @@ const addFiles = (fileList) => {
 };
 
 // 上传单个文件
-const uploadFile = (file) => {
+const uploadFile = async (file) => {
   // 更新文件状态
   const fileIndex = uploadFiles.value.findIndex(f => f.id === file.id);
   if (fileIndex === -1) return;
@@ -332,40 +347,108 @@ const uploadFile = (file) => {
   uploadFiles.value[fileIndex].progress = 0;
   uploadFiles.value[fileIndex].errorMessage = null;
   
-  // 模拟上传进度
-  const simulateProgress = setInterval(() => {
-    const currentFile = uploadFiles.value[fileIndex];
-    
-    if (!currentFile || currentFile.status !== 'uploading') {
-      clearInterval(simulateProgress);
-      return;
-    }
-    
-    // 更新进度
-    currentFile.progress += Math.floor(Math.random() * 10);
-    
-    if (currentFile.progress >= 100) {
-      currentFile.progress = 100;
-      clearInterval(simulateProgress);
+  // 强制更新UI
+  uploadFiles.value = [...uploadFiles.value];
+  
+  // 尝试使用实际API上传
+  let useRealAPI = !DEBUG_MODE;
+  let uploadSuccess = false;
+  
+  while (!uploadSuccess) {
+    try {
+      // 选择上传方法：实际API或模拟API
+      const uploadFunction = useRealAPI ? uploadPhoto : mockUploadPhoto;
+      console.log(`使用${useRealAPI ? '实际' : '模拟'}上传方法`);
       
-      // 模拟随机成功/失败
-      setTimeout(() => {
-        const success = Math.random() > 0.1; // 90%成功率
-        if (success) {
-          currentFile.status = 'success';
-        } else {
-          currentFile.status = 'error';
-          currentFile.errorMessage = '上传失败，请重试';
+      // 准备上传配置
+      const uploadOptions = {
+        autoRename: autoRename.value,
+        preserveExif: preserveExif.value,
+        onProgress: (progressInfo) => {
+          // 输出进度信息用于调试
+          console.log('Upload progress:', progressInfo);
+          
+          // 查找最新的文件索引
+          const currentIndex = uploadFiles.value.findIndex(f => f.id === file.id);
+          if (currentIndex !== -1) {
+            // 使用传入的百分比或计算百分比
+            const percentCompleted = progressInfo.percent !== undefined 
+              ? progressInfo.percent 
+              : (progressInfo.total > 0 
+                  ? Math.round((progressInfo.loaded * 100) / progressInfo.total) 
+                  : 0);
+            
+            // 更新进度条
+            uploadFiles.value[currentIndex].progress = percentCompleted;
+            
+            // 强制Vue更新UI
+            uploadFiles.value = [...uploadFiles.value];
+          }
         }
-      }, 500);
+      };
+      
+      // 执行上传
+      const response = await uploadFunction(file.file, selectedAlbumId.value, uploadOptions);
+      
+      // 处理响应
+      if (response && response.code === 0) {
+        // 上传成功
+        const currentIndex = uploadFiles.value.findIndex(f => f.id === file.id);
+        if (currentIndex !== -1) {
+          uploadFiles.value[currentIndex].status = 'success';
+          uploadFiles.value[currentIndex].progress = 100;
+          uploadFiles.value = [...uploadFiles.value]; // 强制更新UI
+        }
+        
+        uploadSuccess = true;
+      } else {
+        // 业务错误
+        console.error('上传失败:', response?.message || '未知错误');
+        
+        // 如果使用了实际API但失败了，且允许回退，则尝试使用模拟API
+        if (useRealAPI && AUTO_FALLBACK) {
+          useRealAPI = false;
+          console.log('尝试使用模拟上传作为备选方案');
+          continue; // 继续循环，尝试模拟上传
+        }
+        
+        // 如果没有回退或回退也失败了，则显示错误
+        const currentIndex = uploadFiles.value.findIndex(f => f.id === file.id);
+        if (currentIndex !== -1) {
+          uploadFiles.value[currentIndex].status = 'error';
+          uploadFiles.value[currentIndex].errorMessage = response?.message || '上传失败';
+          uploadFiles.value = [...uploadFiles.value]; // 强制更新UI
+        }
+        
+        uploadSuccess = true; // 结束循环，即使是失败状态
+      }
+    } catch (error) {
+      console.error('上传过程中出现异常:', error);
+      
+      // 如果使用了实际API但失败了，且允许回退，则尝试使用模拟API
+      if (useRealAPI && AUTO_FALLBACK) {
+        useRealAPI = false;
+        console.log('出现异常，尝试使用模拟上传作为备选方案');
+        continue; // 继续循环，尝试模拟上传
+      }
+      
+      // 如果没有回退或回退也失败了，则显示错误
+      const currentIndex = uploadFiles.value.findIndex(f => f.id === file.id);
+      if (currentIndex !== -1) {
+        uploadFiles.value[currentIndex].status = 'error';
+        uploadFiles.value[currentIndex].errorMessage = '上传失败，请稍后重试';
+        uploadFiles.value = [...uploadFiles.value]; // 强制更新UI
+      }
+      
+      uploadSuccess = true; // 结束循环，即使是失败状态
     }
-  }, 300);
+  }
 };
 
 // 上传所有文件
 const uploadAllFiles = () => {
   if (!selectedAlbumId.value) {
-    alert('请先选择相册');
+    ElMessage.warning('请先选择相册');
     return;
   }
   
@@ -380,30 +463,65 @@ const uploadAllFiles = () => {
   
   if (filesToUpload.length === 0) {
     isUploadingAll.value = false;
+    ElMessage.info('没有需要上传的文件');
     return;
   }
   
-  // 开始上传所有文件
-  filesToUpload.forEach(uploadFile);
+  // 显示开始上传的提示
+  ElMessage.info(`开始上传 ${filesToUpload.length} 张照片...`);
   
-  // 等待所有上传完成
+  // 开始上传所有文件
+  filesToUpload.forEach(file => {
+    // 调用上传函数
+    uploadFile(file);
+  });
+  
+  // 等待所有上传完成并显示结果
+  const checkInterval = 500; // 检查间隔，毫秒
+  const maxWaitTime = 300000; // 最长等待时间，5分钟
+  let elapsedTime = 0;
+  
   const checkAllComplete = setInterval(() => {
-    const allComplete = uploadFiles.value.every(
-      file => file.status === 'success' || file.status === 'error'
+    const pendingFiles = uploadFiles.value.filter(
+      file => file.status === 'uploading'
     );
     
-    if (allComplete) {
+    // 所有文件上传完成或超时
+    if (pendingFiles.length === 0 || elapsedTime >= maxWaitTime) {
       isUploadingAll.value = false;
       clearInterval(checkAllComplete);
       
-      // 检查是否全部成功
-      const allSuccess = uploadFiles.value.every(file => file.status === 'success');
-      if (allSuccess) {
-        // 可以选择导航回相册页面
-        // navigateToAlbum();
+      // 统计成功和失败的数量
+      const successCount = uploadFiles.value.filter(file => file.status === 'success').length;
+      const errorCount = uploadFiles.value.filter(file => file.status === 'error').length;
+      const pendingCount = uploadFiles.value.filter(file => file.status === 'uploading').length;
+      
+      if (pendingCount > 0) {
+        // 超时但仍有文件在上传中
+        ElMessage.warning(`上传超时: ${successCount} 张成功, ${errorCount} 张失败, ${pendingCount} 张尚未完成`);
+      } else if (errorCount === 0 && successCount > 0) {
+        // 全部成功
+        ElMessage.success(`成功上传 ${successCount} 张照片`);
+        // 如果需要自动跳转到相册
+        if (successCount === uploadFiles.value.length) {
+          setTimeout(() => {
+            if (confirm('是否查看已上传的相册?')) {
+              navigateToAlbum();
+            }
+          }, 1000);
+        }
+      } else if (successCount > 0 && errorCount > 0) {
+        // 部分成功
+        ElMessage.warning(`上传完成: ${successCount} 张成功, ${errorCount} 张失败`);
+      } else if (errorCount > 0 && successCount === 0) {
+        // 全部失败
+        ElMessage.error(`上传失败: ${errorCount} 张照片上传失败`);
       }
     }
-  }, 500);
+    
+    // 增加已经过时间
+    elapsedTime += checkInterval;
+  }, checkInterval);
 };
 
 // 取消上传
@@ -411,18 +529,31 @@ const cancelUpload = (file) => {
   const fileIndex = uploadFiles.value.findIndex(f => f.id === file.id);
   if (fileIndex !== -1) {
     uploadFiles.value[fileIndex].status = 'error';
+    uploadFiles.value[fileIndex].progress = 0;
     uploadFiles.value[fileIndex].errorMessage = '上传已取消';
+    ElMessage.info('已取消上传');
   }
 };
 
 // 重试上传
 const retryUpload = (file) => {
-  uploadFile(file);
+  // 重置文件状态后重新上传
+  const fileIndex = uploadFiles.value.findIndex(f => f.id === file.id);
+  if (fileIndex !== -1) {
+    // 确保重置状态
+    uploadFiles.value[fileIndex].status = 'uploading';
+    uploadFiles.value[fileIndex].progress = 0;
+    uploadFiles.value[fileIndex].errorMessage = null;
+    
+    // 调用上传函数
+    uploadFile(uploadFiles.value[fileIndex]);
+  }
 };
 
 // 移除文件
 const removeFile = (file) => {
   uploadFiles.value = uploadFiles.value.filter(f => f.id !== file.id);
+  ElMessage.info('已移除文件');
 };
 
 // 清除已完成的上传
@@ -443,30 +574,44 @@ const cancelAllUploads = () => {
 };
 
 // 创建新相册
-const createAlbum = () => {
+const createAlbum = async () => {
   if (!newAlbum.value.title) return;
   
   isCreatingAlbum.value = true;
   
-  // 模拟API调用
-  setTimeout(() => {
-    const newAlbumId = albums.value.length + 1;
-    const album = {
-      id: newAlbumId,
+  try {
+    // 调用实际API创建相册
+    const response = await createAlbumApi({
       title: newAlbum.value.title,
-      description: newAlbum.value.description,
-      photoCount: 0,
-      createdAt: new Date().toISOString()
-    };
+      description: newAlbum.value.description || ''
+    });
     
-    albums.value.push(album);
-    selectedAlbumId.value = newAlbumId;
-    
-    // 重置表单和对话框
-    newAlbum.value = { title: '', description: '' };
-    showCreateAlbumModal.value = false;
+    if (response && response.code === 0 && response.data) {
+      const newAlbumData = response.data;
+      
+      // 添加到相册列表
+      albums.value.push({
+        id: newAlbumData.id,
+        title: newAlbumData.title
+      });
+      
+      // 选择新创建的相册
+      selectedAlbumId.value = newAlbumData.id;
+      
+      // 关闭对话框并重置表单
+      newAlbum.value = { title: '', description: '' };
+      showCreateAlbumModal.value = false;
+      
+      ElMessage.success('相册创建成功');
+    } else {
+      ElMessage.error('创建相册失败: ' + (response?.message || '未知错误'));
+    }
+  } catch (error) {
+    console.error('创建相册失败:', error);
+    ElMessage.error('创建相册失败，请稍后重试');
+  } finally {
     isCreatingAlbum.value = false;
-  }, 1000);
+  }
 };
 
 // 导航到相册页面

@@ -14,15 +14,29 @@ spring:
     database: postgresql
     hibernate:
      ddl-auto: update
-      #  ddl-auto: create
     show-sql: true
-aliyun:
-  oss:
-    endpoint: oss-cn-shenzhen.aliyuncs.com
-    access-key-id: LTAI5t5kAim3zAD8axkEoaCA
-    access-key-secret: gQUbztcirxonDLDnVfD1TfVvmUDLdf
-    bucket-name: la-album-10
-    url-prefix: https://la-album-10.oss-cn-shenzhen.aliyuncs.com/
+    
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:  # 如果有密码，请在这里填写
+      database: 0
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 server:
   port: 9090
+
+# 阿里云OSS配置
+aliyun:
+  oss:
+    endpoint: oss-cn-beijing.aliyuncs.com
+    accessKeyId: LTAI5tEnZ1ZE7QNq1fbRp2RC
+    accessKeySecret: SH0gtLOZfqCK2ctr4OAnzUiIft1zgE
+    bucketName: big-event-isaac
