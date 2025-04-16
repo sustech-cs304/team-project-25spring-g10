@@ -176,6 +176,8 @@ const router = useRouter();
 const route = useRoute();
 const loading = ref(true);
 const photo = ref(null);
+const album = ref(null);
+const albumPhotos = ref([]);
 const shareLink = ref('');
 const copied = ref(false);
 const isGenerating = ref(false);
@@ -192,7 +194,7 @@ onMounted(async () => {
   const photoId = parseInt(route.params.id);
 
   try {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token');
     const photoResponse = await fetch(`/api/photos/${photoId}`, {
       headers: {
         'Authorization': `${token}`,
@@ -200,7 +202,18 @@ onMounted(async () => {
       }
     });
     photo.value = await photoResponse.json();
-       
+     // 获取相册数据
+     if (photo.value?.albumId) {
+      const albumResponse = await fetch(`/api/albums/${photo.value.albumId}`);
+      album.value = await albumResponse.json();
+    }
+    
+    // 获取相册中的所有照片（用于前后导航）
+    if (photo.value?.albumId) {
+      const photosResponse = await fetch(`/api/albums/${photo.value.albumId}/photos`);
+      albumPhotos.value = await photosResponse.json();
+    }
+
   } catch (error) {
     console.error('获取照片信息失败:', error);
     // 可以在这里添加错误提示
