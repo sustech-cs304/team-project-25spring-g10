@@ -1,4 +1,3 @@
-
 <template>
   <div class="image-editor">
     <div class="preview-container">

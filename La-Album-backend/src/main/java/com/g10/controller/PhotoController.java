@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/photo")
+@RequestMapping("/api/photos")
 @CrossOrigin(origins = "*", allowCredentials = "false")
 public class PhotoController {
 

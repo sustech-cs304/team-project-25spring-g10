@@ -23,10 +23,12 @@ public class JwtUtil {
      * @return 生成的token字符串
      */
     public static String genToken(Map<String, Object> claims) {
-        return JWT.create()
+        String token = JWT.create()
                 .withClaim("claims", claims)
                 .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRE_TIME))
                 .sign(Algorithm.HMAC256(KEY));
+        // return "Bearer " + token;
+        return token;
     }
     
     /**
@@ -35,6 +37,11 @@ public class JwtUtil {
      * @return 解析出的信息
      */
     public static Map<String, Object> parseToken(String token) {
+        // 移除Bearer前缀
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        
         return JWT.require(Algorithm.HMAC256(KEY))
                 .build()
                 .verify(token)

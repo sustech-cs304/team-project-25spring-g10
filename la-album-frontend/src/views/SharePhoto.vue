@@ -16,7 +16,7 @@
         <template v-else>
           <div class="photo-preview-section">
             <div class="photo-preview" v-if="photo">
-              <img :src="photo.imageUrl" :alt="photo.title">
+              <img :src="photo.url" :alt="photo.title">
               <div class="photo-info">
                 <h2>{{ photo.title }}</h2>
                 <p>{{ photo.description }}</p>
@@ -189,23 +189,22 @@ const shareSettings = ref({
 
 // 在组件加载时获取照片
 onMounted(async () => {
-  const photoId = route.query.photoId || route.params.id;
-  
-  if (photoId) {
-    // 模拟API调用获取照片信息
-    setTimeout(() => {
-      photo.value = {
-        id: photoId,
-        title: '美丽的风景照片',
-        description: '这是一张令人惊叹的风景照片，拍摄于2023年夏天。',
-        imageUrl: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        albumId: 1,
-        albumName: '旅行相册',
-        createdAt: '2023-07-15T14:30:00Z'
-      };
-      loading.value = false;
-    }, 800);
-  } else {
+  const photoId = parseInt(route.params.id);
+
+  try {
+    const token = localStorage.getItem('authToken');
+    const photoResponse = await fetch(`/api/photos/${photoId}`, {
+      headers: {
+        'Authorization': `${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    photo.value = await photoResponse.json();
+       
+  } catch (error) {
+    console.error('获取照片信息失败:', error);
+    // 可以在这里添加错误提示
+  } finally {
     loading.value = false;
   }
 });
