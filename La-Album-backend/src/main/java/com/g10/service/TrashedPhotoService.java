@@ -1,8 +1,8 @@
 package com.g10.service;
 
+import com.g10.model.User;
 import com.g10.model.Photo;
 import com.g10.model.TrashedPhoto;
-import com.g10.model.TrashBin;
 import com.g10.repository.PhotoRepository;
 import com.g10.repository.TrashedPhotoRepository;
 import com.g10.repository.AlbumRepository;
@@ -20,13 +20,29 @@ public class TrashedPhotoService {
     private final PhotoRepository photoRepository;
     private final AlbumRepository albumRepository;
 
-    // 移动照片到垃圾桶
+
     @Transactional
-    public void moveToTrash(Photo photo, TrashBin trashBin) {
-        TrashedPhoto trash = new TrashedPhoto(photo, trashBin);
-        trashedPhotoRepository.save(trash);
-        photoRepository.delete(photo);
+    public void automaticDeletePhoto() {
+        List<TrashedPhoto> trashedPhotos = trashedPhotoRepository.findAll();
+        long currentTime = System.currentTimeMillis();
+        long thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000; // 30 天的毫秒数
+
+        for (TrashedPhoto trashedPhoto : trashedPhotos) {
+            if (trashedPhoto.getDeletedAt() != null) {
+                long deletedAtMillis = trashedPhoto.getDeletedAt()
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli();
+
+                if (currentTime - deletedAtMillis > thirtyDaysInMillis) {
+                    trashedPhotoRepository.delete(trashedPhoto);
+                }
+            }
+        }
     }
+
+    // TODO: use to test automatic delete
+    public void setDeleteDate(Long photoId) {}
 
     // 还原照片
     @Transactional
@@ -49,13 +65,13 @@ public class TrashedPhotoService {
         return photo;
     }
 
-    // 获取某个用户垃圾桶的所有照片
-    public List<TrashedPhoto> getPhotosInTrashBin(Long trashBinId) {
-        return trashedPhotoRepository.findByTrashBinId(trashBinId);
-    }
-
     // 永久删除垃圾桶中的某张照片
     public void deleteFromTrash(Long id) {
         trashedPhotoRepository.deleteById(id);
+    }
+
+    // 获取某个用户所有被删照片
+    public List<TrashedPhoto> getTrashedPhotos(Long userId) {
+        return trashedPhotoRepository.findByUserId(userId);
     }
 }

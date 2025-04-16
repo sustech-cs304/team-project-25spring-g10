@@ -57,16 +57,11 @@ public class AlbumService {
         Album album = albumRepository.findById(albumId)
                 .orElseThrow(() -> new RuntimeException("Album not found"));
 
-        User user = album.getUser();
-        TrashBin trashBin = user.getTrashBin();
-
-        if (trashBin == null) {
-            throw new RuntimeException("User does not have a trash bin.");
-        }
         // 处理照片：移动到 TrashBin
         for (Photo photo : album.getPhotos()) {
-            TrashedPhoto trashed = new TrashedPhoto(photo, trashBin);
+            TrashedPhoto trashed = new TrashedPhoto(photo);
             trashedPhotoRepository.save(trashed);
+            photoRepository.delete(photo);
         }
 
         // 删除相册（级联删除照片）

@@ -13,13 +13,20 @@ public class JwtUtil {
     private static final long EXPIRE_TIME = 1000 * 60 * 60; // 1小时
 
     public static String genToken(Map<String, Object> claims) {
-        return JWT.create()
+        String token = JWT.create()
                 .withClaim("claims", claims)
                 .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRE_TIME))
                 .sign(Algorithm.HMAC256(KEY));
+        // return "Bearer " + token;
+        return token;
     }
 
     public static Map<String, Object> parseToken(String token) {
+        // 移除Bearer前缀
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        
         return JWT.require(Algorithm.HMAC256(KEY))
                 .build()
                 .verify(token)

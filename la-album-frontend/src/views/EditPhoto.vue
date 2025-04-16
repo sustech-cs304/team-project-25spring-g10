@@ -162,6 +162,7 @@ export default {
         title: '',
         description: '',
         url: '',
+        previewUrl: '',
         date: '',
         location: '',
         albumId: '',
@@ -192,6 +193,11 @@ export default {
     }
   },
   created() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      this.$router.push('/login');
+      return;
+    }
     this.loadData();
   },
   methods: {
@@ -200,26 +206,65 @@ export default {
         this.loading = true;
         this.error = null;
 
+        // 从 localStorage 中获取 JWT Token
+        const token = localStorage.getItem('token'); 
+        console.log(token);
+
+        if (!token) {
+          throw new Error('未找到有效的认证 token');
+        }
         // 加载照片数据
         const photoId = this.$route.params.id;
-        const photoResponse = await fetch(`/api/photos/${photoId}`);
+        console.log('加载照片ID:', photoId);
+        
+        const photoResponse = await fetch(`/api/photos/${photoId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `${token}` // 添加 Bearer Token
+          }
+        });
+
         if (!photoResponse.ok) throw new Error('加载照片失败');
         const photoData = await photoResponse.json();
+        console.log('照片数据:', photoData);
         
         // 加载相册列表
-        const albumsResponse = await fetch('/api/albums');
-        if (!albumsResponse.ok) throw new Error('加载相册失败');
+        const albumsResponse = await fetch('/api/albums', {
+          method: 'GET',
+          headers: {
+            'Authorization': `${token}` // 添加 Bearer Token
+          }
+        });
+
+        if (!albumsResponse.ok) {
+          const errorData = await albumsResponse.json().catch(() => ({}));
+          throw new Error(errorData.message || '加载相册失败');
+        }
+        
         const albumsData = await albumsResponse.json();
+        console.log('相册数据:', albumsData);
 
         this.photo = {
           ...photoData,
           date: this.formatDate(photoData.date),
           tags: photoData.tags || []
         };
+        
+        // 确保 URL 是完整的
+        if (this.photo.url && !this.photo.url.startsWith('http')) {
+          this.photo.url = `/api${this.photo.url}`;
+        }
+        
+        console.log('设置照片URL:', this.photo.url);
+        
         this.albums = albumsData;
       } catch (error) {
         console.error('加载数据失败:', error);
         this.error = error.message;
+        if (error.response?.status === 401) {
+        // token 过期，跳转到登录页
+          this.$router.push('/login');
+        }
       } finally {
         this.loading = false;
       }
@@ -230,7 +275,8 @@ export default {
       return d.toISOString().slice(0, 16);
     },
     handlePreviewUpdate(url) {
-      this.photo.url = url;
+      console.log('收到预览图 URL:', url);
+      this.previewUrl = url;
     },
     handleSaveComplete(url) {
       this.photo.url = url;

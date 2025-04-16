@@ -1,5 +1,6 @@
 package com.g10.controller;
 
+import com.g10.model.User;
 import com.g10.model.Photo;
 import com.g10.model.TrashedPhoto;
 import com.g10.service.TrashedPhotoService;
@@ -16,16 +17,16 @@ public class TrashedPhotoController {
 
     private final TrashedPhotoService trashedPhotoService;
 
-    // 获取垃圾桶列表
-    @GetMapping("/{trashBinId}/photos")
-    public List<TrashedPhoto> getTrashPhotos(@PathVariable Long trashBinId) {
-        return trashedPhotoService.getPhotosInTrashBin(trashBinId);
+    // 获取该用户所有被删除的照片
+    @GetMapping("/{userID}")
+    public List<TrashedPhoto> getTrashPhotos(@PathVariable Long userID) {
+        return trashedPhotoService.getTrashedPhotos(userID); 
     }
 
     // 还原一张照片
     @PostMapping("/restore/{id}")
     public Photo restorePhoto(@PathVariable Long id) {
-        return trashedPhotoService.restorePhoto(id); // 如果抛异常，会被 GlobalExceptionHandler 处理
+        return trashedPhotoService.restorePhoto(id);
     }
 
     // 永久删除一张照片

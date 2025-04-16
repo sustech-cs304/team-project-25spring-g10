@@ -8,7 +8,7 @@ import java.util.List;
 
 @Repository
 public interface TrashedPhotoRepository extends JpaRepository<TrashedPhoto, Long> {
-    public List<TrashedPhoto> findByTrashBinId(Long trashBinId);
+    public List<TrashedPhoto> findByUserId(Long UserId);
 
-    public void deleteByTrashBinId(Long id);
+    public void deleteByUserId(Long UserId);
 }

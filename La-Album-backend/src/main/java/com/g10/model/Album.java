@@ -1,7 +1,13 @@
 package com.g10.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
@@ -10,7 +16,11 @@ import java.util.List;
 
 @Entity
 @Table(name = "albums")
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
 public class Album {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

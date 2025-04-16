@@ -16,7 +16,15 @@ request.interceptors.request.use(
     
     // 如果存在token，则添加到请求头中
     if (token) {
+      // 直接使用token，不添加Bearer前缀（后端会处理）
       config.headers['Authorization'] = token;
+      
+      // 添加调试日志
+      console.log('Request Config:', {
+        url: config.url,
+        method: config.method,
+        headers: config.headers
+      });
     }
     
     return config;
@@ -32,6 +40,13 @@ request.interceptors.response.use(
   response => {
     const res = response.data;
     
+    // 添加调试日志
+    console.log('Response Data:', {
+      url: response.config.url,
+      status: response.status,
+      data: res
+    });
+    
     // 判断响应状态码
     if (res.code === 0) {
       // 请求成功
@@ -40,20 +55,15 @@ request.interceptors.response.use(
       // 处理业务错误
       if (res.code === 401) {
         // token过期或无效
-        ElMessage.error('登录已过期，请重新登录');
+        console.log('Token expired or invalid');
         
-        // 清除localStorage中的token和用户信息
+        // 只清除token
         localStorage.removeItem('token');
-        localStorage.removeItem('userLoggedIn');
-        localStorage.removeItem('username');
         
-        // 强制刷新登录状态
-        window.dispatchEvent(new Event('storage'));
-        
-        // 跳转到登录页
-        setTimeout(() => {
+        // 如果不是登录页面，才跳转
+        if (!window.location.pathname.includes('/login')) {
           router.replace('/login');
-        }, 1500);
+        }
       } else {
         // 其他业务错误
         ElMessage.error(res.message || '请求失败');
@@ -70,18 +80,13 @@ request.interceptors.response.use(
         case 401:
           ElMessage.error('登录已过期，请重新登录');
           
-          // 清除localStorage中的token和用户信息
+          // 只清除token
           localStorage.removeItem('token');
-          localStorage.removeItem('userLoggedIn');
-          localStorage.removeItem('username');
           
-          // 强制刷新登录状态
-          window.dispatchEvent(new Event('storage'));
-          
-          // 跳转到登录页
-          setTimeout(() => {
+          // 如果不是登录页面，才跳转
+          if (!window.location.pathname.includes('/login')) {
             router.replace('/login');
-          }, 1500);
+          }
           break;
           
         case 403:
@@ -93,21 +98,20 @@ request.interceptors.response.use(
           break;
           
         case 500:
-          ElMessage.error('服务器内部错误');
+          ElMessage.error('服务器错误，请稍后再试');
           break;
           
         default:
-          ElMessage.error(`请求失败: ${error.response.status}`);
+          ElMessage.error('请求失败，请稍后再试');
       }
     } else if (error.request) {
-      // 发送请求但没有收到响应
+      // 请求已发送但没有收到响应
       ElMessage.error('无法连接到服务器，请检查网络');
     } else {
-      // 请求设置有问题
-      ElMessage.error('请求发送失败');
+      // 请求配置发生错误
+      ElMessage.error('请求错误');
     }
     
-    console.error('响应错误', error);
     return Promise.reject(error);
   }
 );

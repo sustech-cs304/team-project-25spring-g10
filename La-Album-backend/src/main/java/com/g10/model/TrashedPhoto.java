@@ -5,6 +5,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.hibernate.annotations.Cascade;
+import org.hibernate.annotations.CascadeType;
+
 @Entity
 @Getter
 @Setter
@@ -18,21 +21,23 @@ public class TrashedPhoto {
     private String title;
     private String url;
     private String location;
-    @ElementCollection
-    @CollectionTable(name = "trashed_photo_tags", joinColumns = @JoinColumn(name = "trashed_photo_id"))
-    @Column(name = "tag")
-    private List<String> tags;
+
+    // @ElementCollection
+    // @CollectionTable(name = "trashed_photo_tags", joinColumns = @JoinColumn(name = "trashed_photo_id"))
+    // @Column(name = "tag")
+    // @Cascade(CascadeType.REMOVE)
+    private String tags;
 
     private LocalDateTime uploadTime;
     private LocalDateTime deletedAt;
 
     @ManyToOne
-    @JoinColumn(name = "album_id")
+    @JoinColumn(name = "albums_id")
     private Album originalAlbum; // 用于还原时知道是哪个相册（或改成 Album 实体也可以）
 
     @ManyToOne
-    @JoinColumn(name = "trash_bin_id")
-    private TrashBin trashBin;
+    @JoinColumn(name = "user_id")
+    private User user;
 
     public Long getAlbumId() {
         return originalAlbum.getId();
@@ -44,14 +49,14 @@ public class TrashedPhoto {
         this.deletedAt = LocalDateTime.now();
     }
 
-    public TrashedPhoto(Photo photo, TrashBin trashBin) {
+    public TrashedPhoto(Photo photo) {
         this.originalPhotoId = photo.getId();
         this.title = photo.getTitle();
         this.url = photo.getUrl();
         this.location = photo.getLocation();
         this.uploadTime = photo.getUploadTime();
         this.originalAlbum = photo.getAlbum();
-        this.trashBin = trashBin;
+        this.user = photo.getAlbum().getUser();
         this.deletedAt = LocalDateTime.now();
         this.tags = photo.getTags();  // 确保 Photo 的 tags 也是 List<String>
     }

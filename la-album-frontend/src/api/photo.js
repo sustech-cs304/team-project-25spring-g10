@@ -155,3 +155,46 @@ export const mockUploadPhoto = async (file, albumId, options = {}) => {
     }, networkDelay);
   });
 };
+
+
+// 删除指定ID的照片
+export const deletePhoto = async (id) => {
+  try {
+    const response = await request.delete(`/photo/${id}`);
+    return {
+      code: 0,
+      message: '删除成功',
+      data: response.data
+    };
+  } catch (error) {
+    console.error("删除照片失败:", error);
+    return {
+      code: -1,
+      message: error.response ? `服务器错误: ${error.response.status}` : '请求失败',
+      data: null
+    };
+  }
+};
+
+
+export const movePhoto = async (photoId, destAlbumId) => {
+  try {
+    const response = await request.put(`/photo/${photoId}/move`, {
+      id: destAlbumId  // 后端只需要相册ID
+    });
+
+    return {
+      code: 0,
+      message: '移动成功',
+      data: response.data
+    };
+  } catch (error) {
+    console.error("移动照片失败:", error);
+    return {
+      code: -1,
+      message: error.response ? `服务器错误: ${error.response.status}` : '请求失败',
+      data: null
+    };
+  }
+};
+

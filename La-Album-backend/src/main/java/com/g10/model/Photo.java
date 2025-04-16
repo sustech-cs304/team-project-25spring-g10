@@ -6,7 +6,11 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.hibernate.annotations.Cascade;
+import org.hibernate.annotations.CascadeType;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
+
 
 @Entity
 @Table(name = "photos")
@@ -21,15 +25,16 @@ public class Photo {
     private String url;  // 照片存储的 URL
     private String location;  // 拍摄地点
 
-    @ElementCollection
-    @CollectionTable(name = "photo_tags", joinColumns = @JoinColumn(name = "photo_id"))
-    @Column(name = "tag")
-    private List<String> tags;
+    // @ElementCollection
+    // @CollectionTable(name = "photo_tags", joinColumns = @JoinColumn(name = "photo_id"))
+    // @Column(name = "tag")
+    // @Cascade(CascadeType.REMOVE)
+    private String tags;
 
     private LocalDateTime uploadTime;  // 上传时间
 
     @ManyToOne
-    @JoinColumn(name = "album_id")
+    @JoinColumn(name = "albums_id")
     @JsonBackReference
     private Album album;
 

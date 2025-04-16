@@ -2,9 +2,7 @@ package com.g10.config;
 
 import com.g10.interceptor.LoginInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -17,25 +15,15 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private LoginInterceptor loginInterceptor;
 
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:8080") //
-                        .allowedMethods("GET", "POST", "PUT", "DELETE")
-                        .allowCredentials(true);
-            }
-        };
-    }
-
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // 登录、注册接口和静态资源不需要拦截
         registry.addInterceptor(loginInterceptor)
                 .excludePathPatterns(
-                    "/api/users/login",
-                    "/api/users/register"
+                        "/api/users/login",
+                        "/api/users/register",
+                        "/static/**",
+                        "/api/files/**"
                 );
     }
 }

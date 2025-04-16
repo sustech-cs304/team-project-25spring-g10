@@ -79,7 +79,6 @@ public class UserController {
         // 加密密码
         newUser.setPassword(Md5Util.getMD5String(password));
         userService.createUser(newUser);
-        
         return Result.success();
     }
     

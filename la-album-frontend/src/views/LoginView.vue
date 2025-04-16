@@ -170,14 +170,15 @@ const handleLogin = async () => {
   try {
     // 调用登录API
     const response = await login(username.value, password.value);
-    console.log('登录响应:', response); // 调试输出
+    console.log('登录响应:', response);
     
     // 检查登录是否成功
     if (response && response.code === 0) {
+      // 确保token正确格式化并存储
+      const token = response.data;
+      
       // 存储用户令牌到本地存储
-      localStorage.setItem('token', response.data);
-      localStorage.setItem('userLoggedIn', 'true');
-      localStorage.setItem('username', username.value);
+      localStorage.setItem('token', token);
       
       // 如果勾选了"记住我"，可以设置更长的过期时间或其他标记
       if (rememberMe.value) {
@@ -186,28 +187,14 @@ const handleLogin = async () => {
       
       console.log('登录成功，准备跳转到首页');
       
-      // 强制刷新状态（确保其他组件能感知到登录状态变化）
-      window.dispatchEvent(new Event('storage'));
-      
-      // 使用多种方式尝试跳转，确保跳转成功
+      // 使用 router.push 进行导航
       try {
-        // 先尝试使用router.replace
-        await router.replace('/');
-        console.log('使用router.replace跳转成功');
-      } catch (routerError) {
-        console.error('router.replace跳转失败:', routerError);
-        
-        // 如果router.replace失败，尝试使用router.push
-        try {
-          await router.push('/');
-          console.log('使用router.push跳转成功');
-        } catch (pushError) {
-          console.error('router.push跳转失败:', pushError);
-          
-          // 最后使用window.location
-          console.log('尝试使用window.location跳转');
-          window.location.href = '/';
-        }
+        await router.push({ path: '/' });
+        console.log('导航到首页成功');
+      } catch (navigationError) {
+        console.error('导航失败:', navigationError);
+        // 如果导航失败，使用 window.location
+        window.location.href = '/';
       }
     } else {
       // 登录失败，显示错误信息

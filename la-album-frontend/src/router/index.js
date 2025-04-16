@@ -33,33 +33,34 @@ const router = createRouter({
 
 // 全局导航守卫，检查用户是否登录
 router.beforeEach((to, from, next) => {
-  console.log('路由变化:', from.path, ' -> ', to.path);
+  console.log('Navigation:', {
+    from: from.path,
+    to: to.path,
+    timestamp: new Date().toISOString()
+  });
   
-  // 获取登录状态（多重检查，提高可靠性）
+  // 获取token
   const token = localStorage.getItem('token');
-  const isUserLoggedIn = localStorage.getItem('userLoggedIn') === 'true';
-  const isAuthenticated = token && isUserLoggedIn;
+  
+  // 验证token基本格式
+  const isValidToken = token && token.length > 20;
   
   // 不需要登录就可以访问的页面
   const publicPages = ['/login', '/register'];
   const authRequired = !publicPages.includes(to.path);
   
-  console.log('Auth状态:', { isAuthenticated, authRequired });
+  console.log('Auth Check:', {
+    token: token ? '存在' : '不存在',
+    isValidToken,
+    authRequired,
+    path: to.path
+  });
   
-  if (authRequired && !isAuthenticated) {
-    // 如果需要登录但用户未登录，重定向到登录页面
-    console.log('需要登录，重定向到登录页面');
+  if (authRequired && !isValidToken) {
+    // 如果需要登录但没有有效token，重定向到登录页
     next('/login');
   } else {
-    // 如果用户已登录且尝试访问登录页面，重定向到首页
-    if (isAuthenticated && publicPages.includes(to.path)) {
-      console.log('已登录用户访问登录页，重定向到首页');
-      next('/');
-    } else {
-      // 其他情况正常导航
-      console.log('正常导航');
-      next();
-    }
+    next();
   }
 });
 

@@ -44,9 +44,6 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @JsonManagedReference
     private List<Album> albums;
-
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private TrashBin trashBin;
     
     // 预设创建和更新时间
     @PrePersist

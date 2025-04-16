@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/photo")
+@RequestMapping("/api/photos")
 @CrossOrigin(origins = "*", allowCredentials = "false")
 public class PhotoController {
 
@@ -52,52 +52,55 @@ public class PhotoController {
         return ResponseEntity.notFound().build();
     }
 
-    // 上传新照片
     @PostMapping("/upload")
     public ResponseEntity<Photo> uploadPhoto(
-        @RequestParam("file") MultipartFile file,
-        @RequestParam("albumId") Long albumId
-    ) {
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("albumId") Long albumId) {
         try {
             // 验证文件
             validateFile(file);
-            
-            // 上传到OSS
+
+            // 检查 album 是否存在
+            Album album = albumService.getAlbumById(albumId);
+            if (album == null) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // 上传到 OSS
             String url = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
-            
-        
+
             // 创建照片记录
             Photo photo = new Photo();
             photo.setTitle(file.getOriginalFilename());
             photo.setUrl(url);
-            photo.setAlbum(albumService.getAlbumById(albumId));
-            
+            photo.setAlbum(album);
+
             // 保存到数据库
             Photo savedPhoto = photoService.savePhoto(photo);
-            
+
             return ResponseEntity.ok(savedPhoto);
         } catch (Exception e) {
             System.out.println("Upload error: " + e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("文件不能为空");
         }
-        
+
         // 验证文件大小（限制为10MB）
         if (file.getSize() > 10 * 1024 * 1024) {
             throw new IllegalArgumentException("文件大小不能超过10MB");
         }
-        
+
         // 验证文件类型
         String contentType = file.getContentType();
-        if (contentType == null || 
-            (!contentType.startsWith("image/jpeg") && 
-             !contentType.startsWith("image/png") && 
-             !contentType.startsWith("image/gif"))) {
+        if (contentType == null ||
+                (!contentType.startsWith("image/jpeg") &&
+                        !contentType.startsWith("image/png") &&
+                        !contentType.startsWith("image/gif"))) {
             throw new IllegalArgumentException("只支持jpg、png、gif格式的图片");
         }
     }

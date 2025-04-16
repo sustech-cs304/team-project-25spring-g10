@@ -2,7 +2,6 @@ package com.g10.service;
 
 import com.g10.model.Album;
 import com.g10.model.Photo;
-import com.g10.model.TrashBin;
 import com.g10.model.User;
 import com.g10.repository.*;
 import jakarta.transaction.Transactional;
@@ -18,7 +17,7 @@ public class UserService {
     private final UserRepository userRepository;
     private AlbumRepository albumRepository;
     private PhotoRepository photoRepository;
-    private TrashBinRepository trashBinRepository;
+    // private TrashBinRepository trashBinRepository;
     private TrashedPhotoRepository trashedPhotoRepository;
 
     @Autowired
@@ -43,6 +42,10 @@ public class UserService {
 
     // 创建新用户
     public User createUser(User user) {
+        // Album defaultAlbum = new Album();
+        // defaultAlbum.setTitle("Default Album");
+        // defaultAlbum.setDescription("Default Album");
+        // defaultAlbum.setUser(user);
         return userRepository.save(user);
     }
 
@@ -66,12 +69,12 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 删除用户的 TrashBin（级联删除）
-        TrashBin trashBin = user.getTrashBin();
-        if (trashBin != null) {
-            trashedPhotoRepository.deleteByTrashBinId(trashBin.getId());  // 删除所有垃圾照片
-            trashBinRepository.delete(trashBin);  // 删除垃圾桶
-        }
+        // // 删除用户的 TrashBin（级联删除）
+        // TrashBin trashBin = user.getTrashBin();
+        // if (trashBin != null) {
+        //     trashedPhotoRepository.deleteByTrashBinId(trashBin.getId());  // 删除所有垃圾照片
+        //     trashBinRepository.delete(trashBin);  // 删除垃圾桶
+        // }
 
         // 删除用户的所有相册及其中的所有照片（级联删除）
         for (Album album : user.getAlbums()) {
@@ -82,8 +85,7 @@ public class UserService {
         }
 
         // 删除该用户所有被删除的照片（TrashedPhoto）
-        assert user.getTrashBin() != null;
-        trashedPhotoRepository.deleteByTrashBinId(user.getTrashBin().getId());
+        trashedPhotoRepository.deleteByUserId(user.getId());
 
         // 最后删除用户
         userRepository.delete(user);
