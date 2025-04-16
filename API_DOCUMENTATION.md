@@ -1,5 +1,5 @@
 # La-Album API 文档
-
+BASE_URL = "http://localhost:9090"  !!!!!!!
 ## 1. 用户认证模块
 
 ### 1.1 用户注册
