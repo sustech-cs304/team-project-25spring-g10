@@ -32,11 +32,10 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 登录、注册接口和获取所有用户接口不需要拦截
         registry.addInterceptor(loginInterceptor)
                 .excludePathPatterns(
-                        "/api/users/login",
-                        "/api/users/register"
+                    "/api/users/login",
+                    "/api/users/register"
                 );
     }
 }
