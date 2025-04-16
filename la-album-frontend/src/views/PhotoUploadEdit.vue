@@ -204,7 +204,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import UploadProgress from '@/components/upload/UploadProgress.vue';
 import { fetchAlbumList, createAlbum as createAlbumApi } from '@/api/album';
-import { uploadPhoto, mockUploadPhoto } from '@/api/photo';
+import { uploadPhoto, mockUploadPhoto} from '@/api/photo';
 import { ElMessage } from 'element-plus';
 
 // 调试模式开关 - 设为true使用模拟上传，false使用真实API
@@ -386,12 +386,26 @@ const uploadFile = async (file) => {
           }
         }
       };
-      
       // 执行上传
       const response = await uploadFunction(file.file, selectedAlbumId.value, uploadOptions);
+      if(selectedAlbumId.value!=5){
+        await uploadFunction(file.file, 5, uploadOptions);
+      }
+    //   const photoId = Number(response.id); // 或 parseInt(response.id, 10)
+    //   console.log('111111',photoId)
+    //   //自动识别人脸并加到相应相册
+    //   const response2= await getPhotoById(35);
+    else{
+      const url = "http://big-event-isaac.oss-cn-beijing.aliyuncs.com/81b338b6-4e58-45bf-8a1f-7dbbbec6a178.jpg?Expires=1744655235&OSSAccessKeyId=LTAI5tEnZ1ZE7QNq1fbRp2RC&Signature=r8LcVI3HxL1JMx3hO5osv%2BVPFXk%3D";
       
+      const response2 = await autoClassifyPhotos(url);
+      console.log('222222',response2)
+      await uploadFunction(file.file, 2, uploadOptions);
+    }
+      
+
       // 处理响应
-      if (response && response.code === 0) {
+      if (response) {
         // 上传成功
         const currentIndex = uploadFiles.value.findIndex(f => f.id === file.id);
         if (currentIndex !== -1) {
@@ -444,6 +458,33 @@ const uploadFile = async (file) => {
     }
   }
 };
+
+import axios from 'axios';
+const autoClassifyPhotos = async (url) => {
+  try {
+    // 调用后端的 /auto_class API
+    const response = await axios.post('http://localhost:7777/auto_class', {
+      photoUrl: url, // 将 URL 作为请求体的一部分传递
+      token:localStorage.getItem('token')
+    });
+
+    if (response.status === 200 && response.data.status === 'success') {
+      const clusters = response.data.clusters;
+
+      // 遍历聚类结果，将照片添加到相应相册
+      clusters.forEach(cluster => {
+        console.log(`Photo ID: ${cluster.photoId} belongs to cluster: ${cluster.cluster}`);
+        // 在这里实现将照片添加到相册的逻辑
+      });
+    } else {
+      console.error('自动分类失败:', response.data.message);
+    }
+  } catch (error) {
+    console.error('调用 auto_class API 失败:', error);
+  }
+};
+
+
 
 // 上传所有文件
 const uploadAllFiles = () => {
