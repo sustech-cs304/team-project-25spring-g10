@@ -12,7 +12,7 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 # 导入各个模块
-from mcp_server.api import auth, albums
+from mcp_server.api import auth, albums, photos
 from mcp_server.prompts import code_prompts
 
 # 创建MCP服务器
@@ -27,12 +27,21 @@ def register_all():
     # 注册相册管理相关工具
     albums.register_tools(mcp)
     
+    # 注册照片管理相关工具
+    photos.register_tools(mcp)
+    
     # 注册提示功能
     code_prompts.register_prompts(mcp)
 
 # 注册所有功能
 register_all()
 
-if __name__ == "__main__":
+def main():
+    """
+    主入口函数，用于命令行运行
+    """
     print("La-Album API Tools MCP服务器启动中...")
     mcp.run(transport="stdio")
+    
+if __name__ == "__main__":
+    main()

@@ -1,11 +1,7 @@
 from setuptools import setup, find_packages
 
+# 从pyproject.toml读取基本配置
+# 仅保留需要动态处理的部分
 setup(
-    name="mcp-server",
-    version="0.1.0",
     packages=find_packages(),
-    install_requires=[
-        "mcp[cli]",
-        "requests",
-    ],
 ) 
