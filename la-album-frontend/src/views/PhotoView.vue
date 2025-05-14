@@ -246,7 +246,6 @@ const goBack = () => {
 </script>
 
 <style scoped>
-/* 样式部分保持不变 */
 .photo-view {
   min-height: 100vh;
   position: relative;
@@ -258,5 +257,4 @@ const goBack = () => {
   margin-bottom: var(--space-lg);
 }
 
-/* 其他样式保持不变... */
 </style>
