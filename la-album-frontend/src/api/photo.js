@@ -1,11 +1,11 @@
-import axios from "axios";
+// import axios from "axios";
 import request from '@/utils/request';
 
-const BASE_URL = "http://localhost:9090/api/photo"; 
+const BASE_URL = "http://localhost:9090/api/photos"; 
 
 export const getPhotoById = async (id) => {
   try {
-    const response = await request.get(`/photo/${id}`);
+    const response = await request.get(`${BASE_URL}/${id}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching photo:", error);
@@ -13,15 +13,15 @@ export const getPhotoById = async (id) => {
   }
 };
 
-export const getDeletedPhotos = async () => {
-  try {
-      const response = await axios.get(`${BASE_URL}/deleted`);
-      return response.data;
-  } catch (error) {
-      console.error("Error fetching deleted photos:", error);
-      return [];
-  }
-};
+// export const getDeletedPhotos = async () => {
+//   try {
+//       const response = await request.get(`${BASE_URL}/deleted`);
+//       return response.data;
+//   } catch (error) {
+//       console.error("Error fetching deleted photos:", error);
+//       return [];
+//   }
+// };
 
 // 上传照片到指定相册
 export const uploadPhoto = async (file, albumId, options = {}) => {
@@ -66,7 +66,7 @@ export const uploadPhoto = async (file, albumId, options = {}) => {
       };
     }
     
-    const response = await axios.post(`${BASE_URL}/upload`, formData, config);
+    const response = await request.post(`${BASE_URL}/upload`, formData, config);
     
     return response.data;
   } catch (error) {
@@ -160,7 +160,7 @@ export const mockUploadPhoto = async (file, albumId, options = {}) => {
 // 删除指定ID的照片
 export const deletePhoto = async (id) => {
   try {
-    const response = await request.delete(`/photo/${id}`);
+    const response = await request.delete(`${BASE_URL}/${id}`);
     return {
       code: 0,
       message: '删除成功',
@@ -179,7 +179,7 @@ export const deletePhoto = async (id) => {
 
 export const movePhoto = async (photoId, destAlbumId) => {
   try {
-    const response = await request.put(`/photo/${photoId}/move`, {
+    const response = await request.put(`${BASE_URL}/${photoId}/move`, {
       id: destAlbumId  // 后端只需要相册ID
     });
 

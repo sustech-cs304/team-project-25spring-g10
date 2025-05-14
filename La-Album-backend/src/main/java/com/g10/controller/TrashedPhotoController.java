@@ -2,13 +2,16 @@ package com.g10.controller;
 
 import com.g10.model.User;
 import com.g10.model.Photo;
+import com.g10.model.Result;
 import com.g10.model.TrashedPhoto;
 import com.g10.service.TrashedPhotoService;
+import com.g10.utils.ThreadLocalUtil;
+import com.g10.utils.OssUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/trash")
@@ -17,22 +20,41 @@ public class TrashedPhotoController {
 
     private final TrashedPhotoService trashedPhotoService;
 
-    // 获取该用户所有被删除的照片
-    @GetMapping("/{userID}")
-    public List<TrashedPhoto> getTrashPhotos(@PathVariable Long userID) {
-        return trashedPhotoService.getTrashedPhotos(userID); 
+    @Autowired
+    private OssUtil ossUtil;
+
+    @GetMapping
+    public Result<List<TrashedPhoto>> getTrashPhotos() {
+        // 从 ThreadLocal 或 SecurityContextHolder 中获取当前登录用户 ID
+        Map<String, Object> userInfo = ThreadLocalUtil.get();
+        Long userId = Long.valueOf(userInfo.get("id").toString());
+        List<TrashedPhoto> trashedPhotos = trashedPhotoService.getTrashedPhotos(userId);
+        trashedPhotos.forEach(photo -> {
+            String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
+            photo.setUrl(signedUrl);
+        });
+        return Result.success(trashedPhotos);
     }
+
 
     // 还原一张照片
     @PostMapping("/restore/{id}")
-    public Photo restorePhoto(@PathVariable Long id) {
-        return trashedPhotoService.restorePhoto(id);
+    public Result<Photo> restorePhoto(@PathVariable Long id) {
+        Photo restoredPhoto = trashedPhotoService.restorePhoto(id);
+        String signedUrl = ossUtil.generateSignedUrl(restoredPhoto.getUrl());
+        restoredPhoto.setUrl(signedUrl);
+        return Result.success(restoredPhoto);
     }
 
     // 永久删除一张照片
     @DeleteMapping("/{id}")
-    public void deleteFromTrash(@PathVariable Long id) {
+    public Result<Void> deleteFromTrash(@PathVariable Long id) {
+        TrashedPhoto trashedPhoto = trashedPhotoService.getTrashedPhotoById(id);
+        System.out.println("要删除的对象的 trashedPhoto.URL: " + trashedPhoto.getUrl());
+        ossUtil.deleteFile(trashedPhoto.getUrl());
+
         trashedPhotoService.deleteFromTrash(id);
+        return Result.success(null);
     }
 }
 

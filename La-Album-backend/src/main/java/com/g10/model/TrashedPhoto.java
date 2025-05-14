@@ -58,7 +58,7 @@ public class TrashedPhoto {
         this.originalAlbum = photo.getAlbum();
         this.user = photo.getAlbum().getUser();
         this.deletedAt = LocalDateTime.now();
-        this.tags = photo.getTags();  // 确保 Photo 的 tags 也是 List<String>
+        this.tags = photo.getTags();
     }
 
 }

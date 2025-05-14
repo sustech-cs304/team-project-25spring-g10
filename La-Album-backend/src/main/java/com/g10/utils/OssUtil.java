@@ -110,4 +110,30 @@ public class OssUtil {
                 return "application/octet-stream";
         }
     }
+
+    // private String extractObjectNameFromUrl(String url) {
+    //     try {
+    //         URL fullUrl = new URL(url);
+    //         String host = ossConfig.getBucketName() + "." + ossConfig.getEndpoint();  // 例如 my-bucket.oss-cn-hangzhou.aliyuncs.com
+    //         String path = fullUrl.getPath(); // /folder/filename.jpg
+    //         return path.startsWith("/") ? path.substring(1) : path;
+    //     } catch (Exception e) {
+    //         System.out.println("提取 OSS 对象名称失败: " + e.getMessage());
+    //         throw new RuntimeException("非法的 OSS URL: " + url, e);
+    //     }
+    // }
+
+    public void deleteFile(String fileUrl) {
+        try {
+            // String objectName = extractObjectNameFromUrl(fileUrl);
+            System.out.println("要删除的对象OSS URL: " + fileUrl);
+            ossClient.deleteObject(ossConfig.getBucketName(), fileUrl);
+            System.out.println("已从 OSS 删除对象: " + fileUrl);
+        } catch (Exception e) {
+            System.out.println("删除 OSS 文件失败: " + e.getMessage());
+            throw new RuntimeException("删除 OSS 文件失败", e);
+        }
+    }
+    
+    
 } 

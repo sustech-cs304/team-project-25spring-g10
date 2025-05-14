@@ -74,4 +74,9 @@ public class TrashedPhotoService {
     public List<TrashedPhoto> getTrashedPhotos(Long userId) {
         return trashedPhotoRepository.findByUserId(userId);
     }
+
+    public TrashedPhoto getTrashedPhotoById(Long id) {
+        return trashedPhotoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trashed photo not found"));
+    }
 }

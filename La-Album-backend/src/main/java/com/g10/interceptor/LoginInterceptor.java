@@ -29,7 +29,9 @@ public class LoginInterceptor implements HandlerInterceptor {
         // 获取请求头中的令牌
         String token = request.getHeader("Authorization");
         System.out.println("Token: " + (token != null ? token.substring(0, Math.min(token.length(), 20)) + "..." : "null"));
-        
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
         if (token == null || token.isEmpty()) {
             System.out.println("Token为空，拒绝访问");
             response.setStatus(401);

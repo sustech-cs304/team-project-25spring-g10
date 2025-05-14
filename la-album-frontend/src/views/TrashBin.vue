@@ -74,10 +74,10 @@
             @click="togglePhotoSelection(photo.id)"
           >
             <div class="photo-thumbnail">
-              <img :src="photo.imageUrl" :alt="photo.title">
+              <img :src="photo.url" :alt="photo.title">
               <div class="photo-overlay">
                 <div class="overlay-actions">
-                  <button class="action-btn restore" @click.stop="restorePhoto(photo.id)">
+                  <button class="action-btn restore" @click.stop="handleRestorePhoto(photo.id)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="1 4 1 10 7 10"></polyline>
                       <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
@@ -101,6 +101,7 @@
             </div>
             <div class="photo-info">
               <div class="photo-title">{{ photo.title }}</div>
+              <div class="photo-description">{{ photo.description }}</div>
               <div class="delete-info">
                 <span class="delete-date">删除于：{{ formatDate(photo.deletedAt) }}</span>
                 <span class="expire-date">将在 {{ getDaysLeft(photo.deletedAt) }} 天后永久删除</span>
@@ -128,6 +129,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { getTrashPhotos, restorePhoto, deleteFromTrash } from '@/api/trash';
 
 const loading = ref(true);
 const deletedPhotos = ref([]);
@@ -138,36 +140,18 @@ const photoToDelete = ref(null);
 
 // 获取已删除照片
 onMounted(async () => {
-  // 模拟API调用
-  setTimeout(() => {
-    deletedPhotos.value = [
-      {
-        id: 101,
-        title: '旧金山金门大桥',
-        imageUrl: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        deletedAt: '2023-04-01T09:15:00Z',
-        originalAlbumId: 1,
-        originalAlbumName: '美国旅行'
-      },
-      {
-        id: 102,
-        title: '纽约中央公园',
-        imageUrl: 'https://images.unsplash.com/photo-1534270804882-6b5048b1c1fc?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        deletedAt: '2023-04-05T14:30:00Z',
-        originalAlbumId: 1,
-        originalAlbumName: '美国旅行'
-      },
-      {
-        id: 103,
-        title: '东京塔',
-        imageUrl: 'https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        deletedAt: '2023-04-10T10:45:00Z',
-        originalAlbumId: 2,
-        originalAlbumName: '亚洲之旅'
-      }
-    ];
+  try {
+    const result = await getTrashPhotos();
+    if (result.code === 0) {
+      deletedPhotos.value = result.data;
+    } else {
+      console.error('获取回收站照片失败:', result.message);
+    }
+  } catch (error) {
+    console.error('获取回收站照片时出错:', error);
+  } finally {
     loading.value = false;
-  }, 800);
+  }
 });
 
 // 格式化日期
@@ -209,28 +193,47 @@ const cancelSelection = () => {
 };
 
 // 恢复单张照片
-const restorePhoto = (photoId) => {
-  // 这里将来会调用API恢复照片
-  console.log('恢复照片', photoId);
-  
-  // 从已删除照片列表中移除
-  deletedPhotos.value = deletedPhotos.value.filter(photo => photo.id !== photoId);
-  // 从选中照片中移除
-  const index = selectedPhotos.value.indexOf(photoId);
-  if (index !== -1) {
-    selectedPhotos.value.splice(index, 1);
+const handleRestorePhoto = async (photoId) => {
+  try {
+    const result = await restorePhoto(photoId);
+    if (result.code === 0) {
+      // 从已删除照片列表中移除
+      deletedPhotos.value = deletedPhotos.value.filter(photo => photo.id !== photoId);
+      // 从选中照片中移除
+      const index = selectedPhotos.value.indexOf(photoId);
+      if (index !== -1) {
+        selectedPhotos.value.splice(index, 1);
+      }
+    } else {
+      console.error('恢复照片失败:', result.message);
+    }
+  } catch (error) {
+    console.error('恢复照片时出错:', error);
   }
 };
 
 // 恢复选中照片
-const restoreSelectedPhotos = () => {
-  // 这里将来会调用API恢复选中的照片
-  console.log('恢复选中照片', selectedPhotos.value);
-  
-  // 从已删除照片列表中移除
-  deletedPhotos.value = deletedPhotos.value.filter(photo => !selectedPhotos.value.includes(photo.id));
-  // 清空选中列表
-  selectedPhotos.value = [];
+//TODO: 这里有问题,并行ok吗？
+const restoreSelectedPhotos = async () => {
+  try {
+    // 使用Promise.all并行处理所有选中的照片
+    const restorePromises = selectedPhotos.value.map(photoId => restorePhoto(photoId));
+    const results = await Promise.all(restorePromises);
+    
+    // 检查是否所有照片都恢复成功
+    const allSuccess = results.every(result => result.code === 0);
+    
+    if (allSuccess) {
+      // 从已删除照片列表中移除
+      deletedPhotos.value = deletedPhotos.value.filter(photo => !selectedPhotos.value.includes(photo.id));
+      // 清空选中列表
+      selectedPhotos.value = [];
+    } else {
+      console.error('部分照片恢复失败');
+    }
+  } catch (error) {
+    console.error('恢复选中照片时出错:', error);
+  }
 };
 
 // 确认删除信息
@@ -277,40 +280,65 @@ const cancelDeleteConfirm = () => {
 };
 
 // 执行删除
-const executeDelete = () => {
-  // 根据不同的删除目标执行不同的删除操作
-  if (deleteTarget.value === 'single') {
-    // 这里将来会调用API永久删除单张照片
-    console.log('永久删除照片', photoToDelete.value);
-    
-    // 从已删除照片列表中移除
-    deletedPhotos.value = deletedPhotos.value.filter(photo => photo.id !== photoToDelete.value);
-    // 从选中照片中移除
-    const index = selectedPhotos.value.indexOf(photoToDelete.value);
-    if (index !== -1) {
-      selectedPhotos.value.splice(index, 1);
+const executeDelete = async () => {
+  try {
+    if (deleteTarget.value === 'single') {
+      // 删除单张照片
+      const result = await deleteFromTrash(photoToDelete.value);
+      if (result.code === 0) {
+        // 从已删除照片列表中移除
+        deletedPhotos.value = deletedPhotos.value.filter(photo => photo.id !== photoToDelete.value);
+        // 从选中照片中移除
+        const index = selectedPhotos.value.indexOf(photoToDelete.value);
+        if (index !== -1) {
+          selectedPhotos.value.splice(index, 1);
+        }
+      } else {
+        console.error('删除照片失败:', result.message);
+      }
+    } else if (deleteTarget.value === 'selected') {
+      // 删除选中的照片（串行处理）
+      const failedPhotos = [];
+      for (const photoId of selectedPhotos.value) {
+        const result = await deleteFromTrash(photoId);
+        if (result.code !== 0) {
+          failedPhotos.push(photoId);
+        }
+      }
+      
+      if (failedPhotos.length === 0) {
+        // 所有照片都删除成功
+        deletedPhotos.value = deletedPhotos.value.filter(photo => !selectedPhotos.value.includes(photo.id));
+        selectedPhotos.value = [];
+      } else {
+        console.error(`以下照片删除失败: ${failedPhotos.join(', ')}`);
+      }
+    } else if (deleteTarget.value === 'all') {
+      // 删除所有照片（串行处理）
+      const failedPhotos = [];
+      for (const photo of deletedPhotos.value) {
+        const result = await deleteFromTrash(photo.id);
+        if (result.code !== 0) {
+          failedPhotos.push(photo.id);
+        }
+      }
+      
+      if (failedPhotos.length === 0) {
+        // 所有照片都删除成功
+        deletedPhotos.value = [];
+        selectedPhotos.value = [];
+      } else {
+        console.error(`以下照片删除失败: ${failedPhotos.join(', ')}`);
+      }
     }
-  } else if (deleteTarget.value === 'selected') {
-    // 这里将来会调用API永久删除选中的照片
-    console.log('永久删除选中照片', selectedPhotos.value);
-    
-    // 从已删除照片列表中移除
-    deletedPhotos.value = deletedPhotos.value.filter(photo => !selectedPhotos.value.includes(photo.id));
-    // 清空选中列表
-    selectedPhotos.value = [];
-  } else if (deleteTarget.value === 'all') {
-    // 这里将来会调用API清空回收站
-    console.log('清空回收站');
-    
-    // 清空已删除照片列表和选中列表
-    deletedPhotos.value = [];
-    selectedPhotos.value = [];
+  } catch (error) {
+    console.error('删除照片时出错:', error);
+  } finally {
+    // 关闭确认对话框
+    showDeleteConfirm.value = false;
+    deleteTarget.value = null;
+    photoToDelete.value = null;
   }
-  
-  // 关闭确认对话框
-  showDeleteConfirm.value = false;
-  deleteTarget.value = null;
-  photoToDelete.value = null;
 };
 </script>
 
@@ -462,6 +490,16 @@ const executeDelete = () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.photo-description {
+  font-size: 0.9rem;
+  color: var(--neutral-600);
+  margin-bottom: var(--space-xs);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .delete-info {

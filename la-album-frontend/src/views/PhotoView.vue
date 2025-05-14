@@ -115,6 +115,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { ElMessageBox } from 'element-plus';
 
 const route = useRoute();
 const router = useRouter();
@@ -211,7 +212,21 @@ const sharePhoto = () => {
 
 // 确认删除
 const confirmDelete = () => {
-  showDeleteModal.value = true;
+  ElMessageBox.confirm(
+    `您确定要删除照片"${photo.value.title}"吗？此操作不可撤销。`,
+    '确认删除',
+    {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      deletePhoto();
+    })
+    .catch(() => {
+      // 用户点击取消，不做任何操作
+    });
 };
 
 // 取消删除
@@ -222,8 +237,13 @@ const cancelDelete = () => {
 // 删除照片
 const deletePhoto = async () => {
   try {
+    const token = localStorage.getItem('token');
     const response = await fetch(`/api/photos/${photo.value.id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'Authorization': `${token}`,
+        'Content-Type': 'application/json'
+      }
     });
     
     if (response.ok) {
@@ -234,8 +254,6 @@ const deletePhoto = async () => {
     }
   } catch (error) {
     console.error('删除照片时出错:', error);
-  } finally {
-    showDeleteModal.value = false;
   }
 };
 
