@@ -11,6 +11,9 @@ import TrashBin from '../views/TrashBin.vue';
 import PhotoUploadEdit from '../views/PhotoUploadEdit.vue';
 import LoginView from '../views/LoginView.vue';
 import RegisterView from '../views/RegisterView.vue';
+import MemoryListView from '../views/MemoryListView.vue';
+import MemoryView from '../views/MemoryView.vue';
+import EditMemoryView from '../views/EditMemoryView.vue';
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
@@ -22,6 +25,9 @@ const routes = [
   { path: '/share/:id', name: 'SharePhoto', component: SharePhoto, props: true },
   { path: '/trash', name: 'TrashBin', component: TrashBin },
   { path: '/upload', name: 'PhotoUpload', component: PhotoUploadEdit },
+  { path: '/memories', name: 'MemoryList', component: MemoryListView },
+  { path: '/memory/:id', name: 'Memory', component: MemoryView, props: true },
+  { path: '/edit-memory/:id', name: 'EditMemory', component: EditMemoryView, props: true },
   { path: '/login', name: 'Login', component: LoginView },
   { path: '/register', name: 'Register', component: RegisterView },
 ];
@@ -38,24 +44,24 @@ router.beforeEach((to, from, next) => {
     to: to.path,
     timestamp: new Date().toISOString()
   });
-  
+
   // 获取token
   const token = localStorage.getItem('token');
-  
+
   // 验证token基本格式
   const isValidToken = token && token.length > 20;
-  
+
   // 不需要登录就可以访问的页面
   const publicPages = ['/login', '/register'];
   const authRequired = !publicPages.includes(to.path);
-  
+
   console.log('Auth Check:', {
     token: token ? '存在' : '不存在',
     isValidToken,
     authRequired,
     path: to.path
   });
-  
+
   if (authRequired && !isValidToken) {
     // 如果需要登录但没有有效token，重定向到登录页
     next('/login');
