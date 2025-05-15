@@ -177,7 +177,9 @@ export default {
         rotation: 0,
         flipH: false,
         flipV: false
-      }
+      },
+      editedFile: null,
+      editedFilename: ''
     }
   },
   computed: {
@@ -278,9 +280,16 @@ export default {
       console.log('收到预览图 URL:', url);
       this.previewUrl = url;
     },
-    handleSaveComplete(url) {
-      this.photo.url = url;
-      this.$emit('save-complete', url);
+    handleSaveComplete(data) {
+      if (typeof data === 'string') {
+        // 旧版本兼容，直接是URL
+        this.photo.url = data;
+      } else {
+        // 新版本，包含URL和文件对象
+        this.photo.url = data.url;
+        this.editedFile = data.file;
+        this.editedFilename = data.filename;
+      }
     },
     handleError(error) {
       console.error('编辑失败:', error);
@@ -312,14 +321,26 @@ export default {
         formData.append('tags', JSON.stringify(this.photo.tags));
         
         // 如果有编辑后的图片，添加到表单
-        if (this.photo.url.startsWith('blob:')) {
+        if (this.editedFile) {
+          // 使用新的文件对象和文件名
+          formData.append('image', this.editedFile, this.editedFilename);
+          formData.append('saveAsNew', 'true'); // 告诉后端保存为新文件
+        } else if (this.photo.url.startsWith('blob:')) {
+          // 兼容旧逻辑
           const response = await fetch(this.photo.url);
           const blob = await response.blob();
           formData.append('image', blob, 'edited.jpg');
+          formData.append('saveAsNew', 'true'); // 告诉后端保存为新文件
         }
+        
+        // 添加token到请求头
+        const token = localStorage.getItem('token');
         
         const response = await fetch(`/api/photos/${this.photo.id}`, {
           method: 'PUT',
+          headers: {
+            'Authorization': `${token}`
+          },
           body: formData
         });
         
@@ -327,7 +348,7 @@ export default {
         
         const data = await response.json();
         this.$emit('save-complete', data);
-        this.$router.push(`/photos/${this.photo.id}`);
+        this.$router.push(`/photos/${data.id || this.photo.id}`);
       } catch (error) {
         console.error('保存失败:', error);
         this.$emit('error', error);

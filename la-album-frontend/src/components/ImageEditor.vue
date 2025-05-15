@@ -129,7 +129,14 @@
             <div 
               class="filter-preview"
               :style="{ filter: filter.style }"
-            ></div>
+            >
+            <img
+              :src="imageUrl"
+              alt="Filter Preview"
+              class="filter-preview-image"
+              :style="{ filter: filter.value }"
+            />
+          </div>
             <span>{{ filter.label }}</span>
           </button>
         </div>
@@ -246,13 +253,61 @@ export default {
       );
     }
   },
+  mounted() {
+    // 加载图像时使用代理方法
+    this.loadImageWithProxy();
+  },
   methods: {
+    async loadImageWithProxy() {
+      try {
+        // 使用代理获取图像，避免CORS问题
+        const proxiedUrl = await this.getProxiedImage(this.imageUrl);
+        
+        // 更新图像引用，使用代理URL
+        if (this.$refs.image) {
+          this.$refs.image.src = proxiedUrl;
+        }
+      } catch (error) {
+        console.error('使用代理加载图像失败:', error);
+        // 如果失败，继续使用原始URL
+      }
+    },
     handleImageLoad(event) {
       this.originalImage = event.target;
       this.$emit('preview-updated', this.imageUrl);
     },
     updatePreview() {
       this.$emit('preview-updated', this.imageUrl);
+    },
+    
+    async getProxiedImage(url) {
+      try {
+        // 使用后端代理端点
+        const encodedUrl = encodeURIComponent(url);
+        const proxyUrl = `/api/photos/proxy?url=${encodedUrl}`;
+        
+        // 使用fetch进行图像请求，避免跨域问题
+        const response = await fetch(proxyUrl, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status}`);
+        }
+        
+        // 将响应转换为blob
+        const imageBlob = await response.blob();
+        
+        // 创建blob URL
+        return URL.createObjectURL(imageBlob);
+      } catch (error) {
+        console.error('获取代理图像失败:', error);
+        // 如果失败，返回原始URL
+        return url;
+      }
     },
     rotate(degrees) {
       this.adjustments.rotation = (this.adjustments.rotation + degrees) % 360;
@@ -290,10 +345,24 @@ export default {
         }
         
         const { canvas } = this.cropData;
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-        const url = URL.createObjectURL(blob);
+        const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+        const imageUrl = URL.createObjectURL(imageBlob);
         
-        this.$emit('save-complete', url);
+        // 为裁剪后的文件生成一个新的唯一文件名
+        // 注意：需要处理URL可能包含查询参数的情况
+        const fullUrl = this.imageUrl.split('?')[0]; // 去除URL中的查询参数
+        const urlParts = fullUrl.split('/');
+        const originalFilename = urlParts[urlParts.length - 1];
+        const filenameParts = originalFilename.split('.');
+        const extension = filenameParts.length > 1 ? filenameParts.pop() : 'jpg';
+        const baseName = filenameParts.join('.');
+        const newFilename = `${baseName}_cropped_${Date.now()}.${extension}`;
+        
+        // 创建一个文件对象，附加新文件名
+        const imageFile = new File([imageBlob], newFilename, { type: 'image/jpeg' });
+        
+        // 发送裁剪后的图片和新文件名
+        this.$emit('save-complete', { url: imageUrl, file: imageFile, filename: newFilename });
         this.isCropping = false;
       } catch (error) {
         console.error('裁剪失败:', error);
@@ -310,19 +379,33 @@ export default {
       try {
         this.isSaving = true;
         
-        let imageData;
+        let imageBlob;
         if (this.cropData) {
           // 使用裁剪后的图像
           const { canvas } = this.cropData;
-          imageData = canvas.toDataURL('image/jpeg', 0.9);
+          imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
         } else {
           // 使用当前预览图像
+          // 创建一个新的图像元素从当前显示的图像
+          const img = new Image();
+          img.crossOrigin = "anonymous"; // 解决跨域问题
+          
+          // 获取代理图像URL以避免CORS问题
+          const proxiedUrl = await this.getProxiedImage(this.imageUrl);
+          
+          // 使用promise等待图像加载
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = proxiedUrl;
+          });
+          
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           
           // 设置画布大小
-          canvas.width = this.originalImage.naturalWidth;
-          canvas.height = this.originalImage.naturalHeight;
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
           
           // 应用变换
           ctx.translate(canvas.width / 2, canvas.height / 2);
@@ -334,7 +417,7 @@ export default {
           ctx.translate(-canvas.width / 2, -canvas.height / 2);
           
           // 绘制图片
-          ctx.drawImage(this.originalImage, 0, 0);
+          ctx.drawImage(img, 0, 0);
           
           // 应用滤镜
           if (this.currentFilter) {
@@ -343,42 +426,81 @@ export default {
             ctx.drawImage(canvas, 0, 0);
           }
           
-          // 应用亮度、对比度和饱和度
-          let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const data = imageData.data;
+          // 转换为blob，不经过像素级操作，避免CORS问题
+          imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
           
-          for (let i = 0; i < data.length; i += 4) {
-            // 亮度
-            if (this.adjustments.brightness !== 0) {
-              const factor = 1 + this.adjustments.brightness / 100;
-              data[i] *= factor;
-              data[i + 1] *= factor;
-              data[i + 2] *= factor;
-            }
-            
-            // 对比度
-            if (this.adjustments.contrast !== 0) {
-              const factor = (259 * (this.adjustments.contrast + 100)) / (255 * (259 - this.adjustments.contrast));
-              data[i] = factor * (data[i] - 128) + 128;
-              data[i + 1] = factor * (data[i + 1] - 128) + 128;
-              data[i + 2] = factor * (data[i + 2] - 128) + 128;
-            }
-            
-            // 饱和度
-            if (this.adjustments.saturation !== 100) {
-              const gray = 0.2989 * data[i] + 0.5870 * data[i + 1] + 0.1140 * data[i + 2];
-              const factor = this.adjustments.saturation / 100;
-              data[i] = gray + factor * (data[i] - gray);
-              data[i + 1] = gray + factor * (data[i + 1] - gray);
-              data[i + 2] = gray + factor * (data[i + 2] - gray);
+          // 如果需要应用像素级调整（如果不会触发CORS错误）
+          if (this.adjustments.brightness !== 0 || 
+              this.adjustments.contrast !== 0 || 
+              this.adjustments.saturation !== 100) {
+            try {
+              // 在新canvas上应用像素级调整
+              const adjustCanvas = document.createElement('canvas');
+              const adjustCtx = adjustCanvas.getContext('2d');
+              adjustCanvas.width = canvas.width;
+              adjustCanvas.height = canvas.height;
+              
+              // 将之前的图像绘制到新画布
+              adjustCtx.drawImage(canvas, 0, 0);
+              
+              // 尝试获取像素数据进行处理
+              const imageData = adjustCtx.getImageData(0, 0, adjustCanvas.width, adjustCanvas.height);
+              const data = imageData.data;
+              
+              for (let i = 0; i < data.length; i += 4) {
+                // 亮度
+                if (this.adjustments.brightness !== 0) {
+                  const factor = 1 + this.adjustments.brightness / 100;
+                  data[i] *= factor;     // R
+                  data[i + 1] *= factor; // G
+                  data[i + 2] *= factor; // B
+                }
+                
+                // 对比度
+                if (this.adjustments.contrast !== 0) {
+                  const factor = (259 * (this.adjustments.contrast + 100)) / (255 * (259 - this.adjustments.contrast));
+                  data[i] = factor * (data[i] - 128) + 128;
+                  data[i + 1] = factor * (data[i + 1] - 128) + 128;
+                  data[i + 2] = factor * (data[i + 2] - 128) + 128;
+                }
+                
+                // 饱和度
+                if (this.adjustments.saturation !== 100) {
+                  const gray = 0.2989 * data[i] + 0.5870 * data[i + 1] + 0.1140 * data[i + 2];
+                  const factor = this.adjustments.saturation / 100;
+                  data[i] = gray + factor * (data[i] - gray);
+                  data[i + 1] = gray + factor * (data[i + 1] - gray);
+                  data[i + 2] = gray + factor * (data[i + 2] - gray);
+                }
+              }
+              
+              adjustCtx.putImageData(imageData, 0, 0);
+              imageBlob = await new Promise(resolve => adjustCanvas.toBlob(resolve, 'image/jpeg', 0.9));
+            } catch (error) {
+              console.warn('无法直接应用像素级调整，使用原始图像:', error);
+              // 忽略错误，使用已有的imageBlob继续
             }
           }
-          
-          ctx.putImageData(imageData, 0, 0);
-          imageData = canvas.toDataURL('image/jpeg', 0.9);
         }
         
-        this.$emit('save-complete', imageData);
+        // 创建object URL
+        const imageUrl = URL.createObjectURL(imageBlob);
+        
+        // 为保存的文件生成一个新的唯一文件名
+        // 注意：需要处理URL可能包含查询参数的情况
+        const fullUrl = this.imageUrl.split('?')[0]; // 去除URL中的查询参数
+        const urlParts = fullUrl.split('/');
+        const originalFilename = urlParts[urlParts.length - 1];
+        const filenameParts = originalFilename.split('.');
+        const extension = filenameParts.length > 1 ? filenameParts.pop() : 'jpg';
+        const baseName = filenameParts.join('.');
+        const newFilename = `${baseName}_edited_${Date.now()}.${extension}`;
+        
+        // 创建一个文件对象，附加新文件名
+        const imageFile = new File([imageBlob], newFilename, { type: 'image/jpeg' });
+        
+        // 发送编辑后的图片和新文件名
+        this.$emit('save-complete', { url: imageUrl, file: imageFile, filename: newFilename });
       } catch (error) {
         console.error('保存失败:', error);
         this.$emit('error', error);
@@ -593,6 +715,13 @@ export default {
 .filters span {
   font-size: 12px;
   color: #666;
+}
+
+.filter-preview-image {
+  max-width: 60px;
+  max-height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
 }
 
 .actions {

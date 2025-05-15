@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://127.0.0.1:5432/postgres # 数据库地址
-    username: postgres  # 数据库用户名
-    password: chenyanyu20041019  # 数据库密码
+    username: zhangv1  # 数据库用户名
+    password: Zwy20040430  # 数据库密码
     driver-class-name: org.postgresql.Driver
 
   # Redis配置

@@ -22,8 +22,10 @@ public class Photo {
     private Long id;  // 照片 ID
 
     private String title;  // 照片标题
+    private String description;  // 照片描述
     private String url;  // 照片存储的 URL
     private String location;  // 拍摄地点
+    private String date;  // 拍摄日期
 
     // @ElementCollection
     // @CollectionTable(name = "photo_tags", joinColumns = @JoinColumn(name = "photo_id"))
