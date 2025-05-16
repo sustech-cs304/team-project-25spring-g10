@@ -38,7 +38,8 @@ export const fetchRecentAlbums = async (limit = 4) => {
 export const fetchAlbumById = async (albumId) => {
   try {
     const response = await request.get(`/albums/${albumId}`);
-    return response; // 返回完整响应，包括code、message和data
+    console.log("in fetchAlbumById", response);
+    return response.data; // 返回完整响应，包括code、message和data
   } catch (error) {
     console.error(`获取相册 ${albumId} 详情失败:`, error);
     throw error;

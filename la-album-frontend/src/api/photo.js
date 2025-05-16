@@ -39,14 +39,22 @@ export const uploadPhoto = async (file, albumId, options = {}) => {
       formData.append('preserveExif', options.preserveExif);
     }
     
+    // const config = {
+    //   headers: {
+    //     'Content-Type': 'multipart/form-data',
+    //     'Authorization': localStorage.getItem('token')
+    //   },
+    //   timeout: 30000 // 增加超时时间到30秒
+    // };
+
     const config = {
       headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': localStorage.getItem('token')
+        'Content-Type': 'multipart/form-data'
       },
-      timeout: 30000 // 增加超时时间到30秒
+      timeout: 30000
     };
-    
+
+
     // 只有在提供了onProgress回调时才添加onUploadProgress
     if (typeof options.onProgress === 'function') {
       config.onUploadProgress = (progressEvent) => {

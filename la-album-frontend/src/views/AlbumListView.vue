@@ -192,10 +192,10 @@ onMounted(async () => {
     const response = await fetchAlbumList();
     
     console.log('获取相册列表响应:', response);
-    
-    if (response && response.code === 0 && Array.isArray(response.data)) {
+    console.log("response code:", response.code);
+    if (response && Array.isArray(response)) {
       // 处理相册数据
-      albums.value = response.data.map(album => {
+      albums.value = response.map(album => {
         // 添加封面URL (如果相册有照片，使用第一张照片作为封面)
         const coverUrl = album.photos && album.photos.length > 0 
           ? album.photos[0].url 

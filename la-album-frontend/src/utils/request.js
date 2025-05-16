@@ -50,6 +50,7 @@ request.interceptors.response.use(
     // 判断响应状态码
     if (res.code === 0) {
       // 请求成功
+      console.log("success");
       return res;
     } else {
       // 处理业务错误

@@ -114,19 +114,20 @@ onMounted(async () => {
   try {
     loading.value = true;
     const response = await fetchAlbumById(albumId);
-    
+    console.log("album ID: ", albumId);
     // 检查返回格式，正确解析数据
     // 后端返回的格式可能是 { code: 0, message: "操作成功", data: 相册数据 }
-    console.log('获取相册响应:', response);
+    console.log('获取相册响应 in AlbumView:', response);
     
-    if (response && response.code === 0 && response.data) {
+    // if (response && response.code === 0 && response.data) {
+    if (response) {
       // 正确处理相册数据
       album.value = {
-        ...response.data,
-        createdAt: response.data.createTime || new Date().toISOString(), // 保持字段一致性
-        photos: response.data.photos || []
+        ...response,
+        createdAt: response.createTime || new Date().toISOString(), // 保持字段一致性
+        photos: response.photos || []
       };
-      console.log('处理后的相册数据:', album.value);
+      console.log('处理后的相册数据 in AlbumView:', album.value);
     } else {
       console.error('相册数据格式不正确:', response);
       ElMessage.error('相册不存在或无法访问');
@@ -169,9 +170,14 @@ const togglePhotoSelection = (photoId) => {
 // 查看照片详情
 const viewPhoto = (photo) => {
   if (!selectionMode.value) {
-    router.push({ name: 'Photo', params: { id: photo.id } });
+    router.push({
+      name: 'Photo',
+      params: { id: photo.id },
+      query: { albumId: album.value.id }
+    });
   }
 };
+
 
 // 编辑相册
 const editAlbum = () => {

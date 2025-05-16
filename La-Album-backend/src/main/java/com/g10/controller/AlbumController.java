@@ -40,7 +40,6 @@ public class AlbumController {
                 }
             }
         }
-        
         return Result.success(albums);
     }
 
@@ -87,7 +86,6 @@ public class AlbumController {
                 photo.setUrl(signedUrl);
             }
         }
-        
         return Result.success(album);
     }
 
