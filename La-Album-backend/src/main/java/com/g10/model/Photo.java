@@ -42,4 +42,9 @@ public class Photo {
     protected void onCreate() {
         this.uploadTime = LocalDateTime.now();
     }
+
+//    @Transient
+//    public Long getAlbumId() {
+//        return album != null ? album.getId() : null;
+//    }
 }

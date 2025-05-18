@@ -1,5 +1,6 @@
 package com.g10.service;
 
+import com.g10.dto.PhotoDTO;
 import com.g10.model.Album;
 import com.g10.model.Photo;
 import com.g10.model.TrashedPhoto;
@@ -38,9 +39,24 @@ public class PhotoService {
     }
 
     // 通过 ID 获取单张照片
-    public Optional<Photo> getPhotoById(Long id) {
-        return photoRepository.findById(id);
+//    public Optional<Photo> getPhotoById(Long id) {
+//        return photoRepository.findById(id);
+//
+//    }
+
+    public Optional<PhotoDTO> getPhotoById(Long id) {
+        return photoRepository.findById(id)
+                .map(photo -> new PhotoDTO(
+                        photo.getId(),
+                        photo.getTitle(),
+                        photo.getUrl(),
+                        photo.getLocation(),
+                        photo.getTags(),
+                        photo.getUploadTime(),
+                        photo.getAlbum() != null ? photo.getAlbum().getId() : null
+                ));
     }
+
 
     // 保存（上传）照片
     public Photo savePhoto(Photo photo) {

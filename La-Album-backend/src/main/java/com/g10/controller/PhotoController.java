@@ -1,5 +1,6 @@
 package com.g10.controller;
 
+import com.g10.dto.PhotoDTO;
 import com.g10.model.Album;
 import com.g10.model.Photo;
 import com.g10.model.User;
@@ -33,30 +34,52 @@ public class PhotoController {
     @Autowired
     private UserService userService;
 
-    // 获取所有照片
     @GetMapping
-    public ResponseEntity<List<Photo>> getAllPhotos() {
-        List<Photo> photos = photoService.getAllPhotos();
-        // 为每张照片生成带签名的URL
-        photos.forEach(photo -> {
+    public ResponseEntity<List<PhotoDTO>> getAllPhotos() {
+        List<PhotoDTO> photoDTOs = photoService.getAllPhotos().stream().map(photo -> {
             String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
-            photo.setUrl(signedUrl);
-        });
-        return ResponseEntity.ok(photos);
+            return new PhotoDTO(
+                    photo.getId(),
+                    photo.getTitle(),
+                    signedUrl,
+                    photo.getLocation(),
+                    photo.getTags(),
+                    photo.getUploadTime(),
+                    photo.getAlbum() != null ? photo.getAlbum().getId() : null
+            );
+        }).toList();
+
+        return ResponseEntity.ok(photoDTOs);
     }
 
-    // 通过 ID 获取单张照片
+
+//    // 通过 ID 获取单张照片
+//    @GetMapping("/{id}")
+//    public ResponseEntity<Photo> getPhotoById(@PathVariable Long id) {
+//        Optional<Photo> photo = photoService.getPhotoById(id);
+//        if (photo.isPresent()) {
+//            // 生成带签名的URL
+//            String signedUrl = ossUtil.generateSignedUrl(photo.get().getUrl());
+//            photo.get().setUrl(signedUrl);
+//            return ResponseEntity.ok(photo.get());
+//        }
+//        return ResponseEntity.notFound().build();
+//    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<Photo> getPhotoById(@PathVariable Long id) {
-        Optional<Photo> photo = photoService.getPhotoById(id);
-        if (photo.isPresent()) {
-            // 生成带签名的URL
-            String signedUrl = ossUtil.generateSignedUrl(photo.get().getUrl());
-            photo.get().setUrl(signedUrl);
-            return ResponseEntity.ok(photo.get());
+    public ResponseEntity<PhotoDTO> getPhoto(@PathVariable Long id) {
+        Optional<PhotoDTO> optionalDto = photoService.getPhotoById(id);
+        if (optionalDto.isPresent()) {
+            PhotoDTO dto = optionalDto.get();
+            String signedUrl = ossUtil.generateSignedUrl(dto.getUrl());
+            dto.setUrl(signedUrl);
+            return ResponseEntity.ok(dto);
+        } else {
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.notFound().build();
     }
+
+
 
     @PostMapping("/upload")
     public ResponseEntity<Photo> uploadPhoto(
@@ -133,17 +156,27 @@ public class PhotoController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<Photo>> searchPhotos(
+    public ResponseEntity<List<PhotoDTO>> searchPhotos(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long albumId) {
 
         List<Photo> results = photoService.searchPhotos(q, startDate, endDate, albumId);
-        results.forEach(photo -> {
+        List<PhotoDTO> dtos = results.stream().map(photo -> {
             String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
-            photo.setUrl(signedUrl);
-        });
-        return ResponseEntity.ok(results);
+            return new PhotoDTO(
+                    photo.getId(),
+                    photo.getTitle(),
+                    signedUrl,
+                    photo.getLocation(),
+                    photo.getTags(),
+                    photo.getUploadTime(),
+                    photo.getAlbum() != null ? photo.getAlbum().getId() : null
+            );
+        }).toList();
+
+        return ResponseEntity.ok(dtos);
     }
+
 }
