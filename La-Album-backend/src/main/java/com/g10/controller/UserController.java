@@ -1,8 +1,10 @@
 package com.g10.controller;
 
+import com.g10.model.Album;
 import com.g10.model.Result;
 import com.g10.model.User;
 import com.g10.service.UserService;
+import com.g10.service.AlbumService;
 import com.g10.utils.JwtUtil;
 import com.g10.utils.Md5Util;
 import com.g10.utils.ThreadLocalUtil;
@@ -29,6 +31,7 @@ public class UserController {
 
     private final UserService userService;
     private final StringRedisTemplate stringRedisTemplate;
+    private final AlbumService albumService;
 
     // 获取所有用户
     @GetMapping
@@ -79,6 +82,13 @@ public class UserController {
         // 加密密码
         newUser.setPassword(Md5Util.getMD5String(password));
         userService.createUser(newUser);
+
+        Album defaultAlbum = new Album();
+        defaultAlbum.setTitle("Default Album");
+        defaultAlbum.setDescription("Default album for user");
+        defaultAlbum.setUser(newUser);
+        albumService.createAlbum(defaultAlbum);
+
         return Result.success();
     }
     
@@ -108,7 +118,15 @@ public class UserController {
             ValueOperations<String, String> operations = stringRedisTemplate.opsForValue();
             String userKey = "user:" + loginUser.getId();
             operations.set(userKey, token, 1, TimeUnit.HOURS);
-            
+
+            Album defaultAlbum = albumService.getDefaultAlbumForUser(loginUser.getId());
+            if (defaultAlbum == null) {
+                Album newDefault = new Album();
+                newDefault.setTitle("Default Album");
+                newDefault.setDescription("系统默认相册");
+                newDefault.setUser(loginUser);
+                albumService.createAlbum(newDefault);
+            }
             return Result.success(token);
         }
         

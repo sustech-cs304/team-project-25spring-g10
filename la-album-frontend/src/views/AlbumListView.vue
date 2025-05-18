@@ -69,6 +69,7 @@
             v-for="album in filteredAlbums" 
             :key="album.id" 
             :album="album"
+            @deleted="handleAlbumDeleted"
           />
         </div>
         
@@ -348,6 +349,10 @@ const saveNewAlbum = async () => {
   } finally {
     isCreatingAlbum.value = false;
   }
+};
+
+const handleAlbumDeleted = (id) => {
+  albums.value = albums.value.filter(album => album.id !== id);
 };
 </script>
 

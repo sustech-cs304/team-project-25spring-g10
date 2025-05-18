@@ -144,6 +144,7 @@ onMounted(async () => {
     const result = await getTrashPhotos();
     if (result.code === 0) {
       deletedPhotos.value = result.data;
+      console.log("response for trash view: ", result);
     } else {
       console.error('获取回收站照片失败:', result.message);
     }

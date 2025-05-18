@@ -60,5 +60,4 @@ public class TrashedPhoto {
         this.deletedAt = LocalDateTime.now();
         this.tags = photo.getTags();
     }
-
 }

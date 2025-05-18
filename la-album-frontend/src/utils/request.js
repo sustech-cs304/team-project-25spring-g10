@@ -46,7 +46,11 @@ request.interceptors.response.use(
       status: response.status,
       data: res
     });
-    
+
+    if (!('code' in response.data)) {
+      return res;
+    }
+
     // 判断响应状态码
     if (res.code === 0) {
       // 请求成功

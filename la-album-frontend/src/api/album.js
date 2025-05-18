@@ -1,7 +1,5 @@
 import request from '@/utils/request';
 
-
-
 // 获取所有相册
 export const fetchAlbumList = async () => {
   try {
@@ -72,6 +70,7 @@ export const updateAlbum = async (albumId, albumData) => {
 export const deleteAlbum = async (albumId) => {
   try {
     const response = await request.delete(`/albums/${albumId}`);
+    console.log("delete response in album.js", response);
     return response; // 返回完整响应
   } catch (error) {
     console.error(`删除相册 ${albumId} 失败:`, error);

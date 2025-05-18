@@ -207,7 +207,6 @@ const cancelDelete = () => showDeleteModal.value = false;
 const deletePhoto = async () => {
   try {
     const token = localStorage.getItem('token');
-    const albumId = route.query.albumId;
     const response = await fetch(`/api/photos/${photo.value.id}`, {
       method: 'DELETE',
       headers: {
@@ -217,7 +216,24 @@ const deletePhoto = async () => {
     });
 
     if (response.ok) {
-      await router.push({name: 'Album', params: {id: albumId}});
+      const from = route.query.from;
+      if (from === 'search') {
+        // 回跳到搜索页面并保留搜索参数
+        router.push({
+          name: 'Search',
+          query: {
+            q: route.query.q || '',
+            startDate: route.query.startDate || '',
+            endDate: route.query.endDate || '',
+            albumId: route.query.albumId || ''
+          }
+        });
+      } else {
+        // 默认跳转到所属相册
+        // const albumId = route.query.albumId;
+        // router.push({ name: 'Album', params: { id: albumId } });
+        router.back();
+      }
     } else {
       console.error('删除照片失败');
     }

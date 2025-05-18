@@ -46,6 +46,7 @@ export const register = async (username, password) => {
 export const getUserInfo = async () => {
   try {
     const response = await request.get('/users/userInfo');
+    console.log("get user info response: ", response)
     return response;
   } catch (error) {
     console.error("获取用户信息失败:", error);

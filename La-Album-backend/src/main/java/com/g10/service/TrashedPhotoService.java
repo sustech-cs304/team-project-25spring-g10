@@ -56,6 +56,7 @@ public class TrashedPhotoService {
         photo.setLocation(trash.getLocation());
         photo.setTags(trash.getTags());
         photo.setUploadTime(trash.getUploadTime());
+
         photo.setAlbum(albumRepository.findById(trash.getAlbumId())
                 .orElseThrow(() -> new RuntimeException("Album not found")));
 

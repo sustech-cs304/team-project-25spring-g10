@@ -16,7 +16,7 @@
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
             </svg>
           </button>
-          <button class="action-btn delete" @click.stop="deleteAlbum">
+          <button class="action-btn delete" @click.stop="deleteAlbumCard">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -39,6 +39,11 @@
 <script setup>
 import { defineProps } from 'vue';
 import { useRouter } from 'vue-router';
+import { deleteAlbum } from '@/api/album';
+import {ElMessage} from "element-plus";
+
+// eslint-disable-next-line no-undef
+const emit = defineEmits(['deleted'])
 
 const props = defineProps({
   album: {
@@ -61,12 +66,35 @@ const navigateToAlbum = () => {
 const editAlbum = () => {
   // 编辑相册的逻辑
   console.log('编辑相册', props.album.id);
+
 };
 
-const deleteAlbum = () => {
-  // 删除相册的逻辑
-  console.log('删除相册', props.album.id);
+const deleteAlbumCard = async () => {
+  if (!props.album || !props.album.id) {
+    ElMessage.warning('无效的相册信息');
+    return;
+  }
+
+  const confirmed = window.confirm(`确定要删除相册 "${props.album.name}" 吗？`);
+  if (!confirmed) return;
+  try {
+    const response = await deleteAlbum(props.album.id);
+    console.log('删除相册响应:', response);
+
+    if (response && response.code === 0) {
+      ElMessage.success(`相册 "${props.album.name}" 删除成功`);
+      // 可选：刷新页面或通知父组件更新相册列表
+      emit('deleted', props.album.id); //
+    } else {
+      console.error('删除相册返回格式异常:', response);
+      ElMessage.error('删除失败，请稍后再试');
+    }
+  } catch (error) {
+    console.error('删除相册出错:', error);
+    ElMessage.error('删除失败，请稍后再试');
+  }
 };
+
 </script>
 
 <style scoped>

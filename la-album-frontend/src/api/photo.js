@@ -1,5 +1,6 @@
 // import axios from "axios";
 import request from '@/utils/request';
+import {getUserInfo} from "@/api/user";
 
 const BASE_URL = "http://localhost:9090/api/photos"; 
 
@@ -29,7 +30,10 @@ export const uploadPhoto = async (file, albumId, options = {}) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('albumId', albumId);
-    
+    const userInfo = await getUserInfo();
+    const userId = userInfo.data.id;
+    formData.append("userId", userId);
+    console.log("upload request user id: ", userId )
     // 添加额外选项
     if (options.autoRename !== undefined) {
       formData.append('autoRename', options.autoRename);
@@ -73,9 +77,7 @@ export const uploadPhoto = async (file, albumId, options = {}) => {
         }
       };
     }
-    
     const response = await request.post(`${BASE_URL}/upload`, formData, config);
-    
     return response.data;
   } catch (error) {
     console.error("上传照片失败:", error);

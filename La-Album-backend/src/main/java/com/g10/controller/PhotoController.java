@@ -2,14 +2,18 @@ package com.g10.controller;
 
 import com.g10.model.Album;
 import com.g10.model.Photo;
+import com.g10.model.User;
 import com.g10.service.AlbumService;
 import com.g10.service.PhotoService;
+import com.g10.service.UserService;
 import com.g10.utils.OssUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +30,8 @@ public class PhotoController {
 
     @Autowired
     private AlbumService albumService;
+    @Autowired
+    private UserService userService;
 
     // 获取所有照片
     @GetMapping
@@ -55,17 +61,25 @@ public class PhotoController {
     @PostMapping("/upload")
     public ResponseEntity<Photo> uploadPhoto(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("albumId") Long albumId) {
+            @RequestParam("albumId") Long albumId,
+            @RequestParam("userId") Long userId) {
         try {
             // 验证文件
             validateFile(file);
 
             // 检查 album 是否存在
-            Album album = albumService.getAlbumById(albumId);
-            if (album == null) {
-                return ResponseEntity.badRequest().build();
+            Album album;
+            if (albumId != null) {
+                album = albumService.getAlbumById(albumId);
+                if (album == null) {
+                    return ResponseEntity.badRequest().build();
+                }
+            } else {
+                album = albumService.getDefaultAlbumForUser(userId);
             }
-
+            if (album == null) {
+                throw new RuntimeException("Album not found");
+            }
             // 上传到 OSS
             String url = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
 
@@ -77,7 +91,6 @@ public class PhotoController {
 
             // 保存到数据库
             Photo savedPhoto = photoService.savePhoto(photo);
-
             return ResponseEntity.ok(savedPhoto);
         } catch (Exception e) {
             System.out.println("Upload error: " + e.getMessage());
@@ -117,5 +130,20 @@ public class PhotoController {
     public ResponseEntity<Photo> movePhoto(@PathVariable Long id, @RequestBody Album dest) {
         photoService.movePhoto(id, dest);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Photo>> searchPhotos(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Long albumId) {
+
+        List<Photo> results = photoService.searchPhotos(q, startDate, endDate, albumId);
+        results.forEach(photo -> {
+            String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
+            photo.setUrl(signedUrl);
+        });
+        return ResponseEntity.ok(results);
     }
 }

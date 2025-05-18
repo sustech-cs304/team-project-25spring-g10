@@ -104,11 +104,14 @@
 </template>
 
 <script setup>
-import {ref, onMounted} from 'vue';
-import {useRouter} from 'vue-router';
+import {ref, onMounted, watch} from 'vue';
+import {useRouter, useRoute} from 'vue-router';
 import PhotoThumbnail from '@/components/photo/PhotoThumbnail.vue';
+import request from '@/utils/request';
+import {fetchAlbumList} from "@/api/album";
 
 const router = useRouter();
+const route = useRoute();
 const searchQuery = ref('');
 const startDate = ref('');
 const endDate = ref('');
@@ -121,23 +124,34 @@ const searchPerformed = ref(false);
 // 获取相册数据
 onMounted(async () => {
   try {
-    const token = localStorage.getItem('authToken');
-    const response = await fetch('/api/albums', {
-      headers: {
-        'Authorization': `${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      albums.value = await response.json();
-    }
+    const response = await fetchAlbumList();
+    console.log("all albums in searchView:", response);
+    albums.value = response;
   } catch (error) {
     console.error('获取相册列表失败:', error);
   }
+
+  // 页面首次加载如果 query 存在搜索条件则自动搜索
+  if (route.query.q || route.query.startDate || route.query.endDate || route.query.albumId) {
+    searchQuery.value = route.query.q || '';
+    startDate.value = route.query.startDate || '';
+    endDate.value = route.query.endDate || '';
+    selectedAlbum.value = route.query.albumId || '';
+    searchPhotos();
+  }
 });
 
-// 搜索照片
+// 监听路由变化，支持删除照片后回到带搜索条件的页面时重新搜索
+watch(() => route.query, () => {
+  if (route.query.q || route.query.startDate || route.query.endDate || route.query.albumId) {
+    searchQuery.value = route.query.q || '';
+    startDate.value = route.query.startDate || '';
+    endDate.value = route.query.endDate || '';
+    selectedAlbum.value = route.query.albumId || '';
+    searchPhotos();
+  }
+});
+
 const searchPhotos = async () => {
   if (!searchQuery.value && !startDate.value && !endDate.value && !selectedAlbum.value) {
     return;
@@ -147,26 +161,16 @@ const searchPhotos = async () => {
   searchPerformed.value = true;
 
   try {
-    const token = localStorage.getItem('authToken');
-    const params = new URLSearchParams();
+    const params = {};
 
-    if (searchQuery.value) params.append('q', searchQuery.value);
-    if (startDate.value) params.append('startDate', startDate.value);
-    if (endDate.value) params.append('endDate', endDate.value);
-    if (selectedAlbum.value) params.append('albumId', selectedAlbum.value);
+    if (searchQuery.value) params.q = searchQuery.value;
+    if (startDate.value) params.startDate = startDate.value;
+    if (endDate.value) params.endDate = endDate.value;
+    if (selectedAlbum.value) params.albumId = selectedAlbum.value;
 
-    const response = await fetch(`/api/photos/search?${params.toString()}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      photos.value = await response.json();
-    } else {
-      throw new Error(`搜索失败: ${response.status}`);
-    }
+    const response = await request.get('/photos/search', { params });
+    console.log("search response: ", response);
+    photos.value = response;
   } catch (error) {
     console.error('搜索照片失败:', error);
     photos.value = [];
@@ -187,9 +191,20 @@ const clearSearch = () => {
 
 // 查看照片详情
 const viewPhoto = (photo) => {
-  router.push({name: 'Photo', params: {id: photo.id}});
+  router.push({
+    name: 'Photo',
+    params: { id: photo.id },
+    query: {
+      from: 'search',
+      q: searchQuery.value,
+      startDate: startDate.value,
+      endDate: endDate.value,
+      albumId: selectedAlbum.value
+    }
+  });
 };
 </script>
+
 
 <style scoped>
 .search-view {

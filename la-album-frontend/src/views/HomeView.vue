@@ -46,6 +46,7 @@
             v-for="album in albums" 
             :key="album.id" 
             :album="album"
+            @deleted="handleAlbumDeleted"
           />
         </div>
       </div>
@@ -150,6 +151,10 @@ const createNewAlbum = () => {
     path: '/albums',
     query: { createNew: 'true' }
   });
+};
+
+const handleAlbumDeleted = (id) => {
+  albums.value = albums.value.filter(album => album.id !== id);
 };
 </script>
 

@@ -155,7 +155,6 @@ public class AlbumController {
         if (!album.getUser().getId().equals(userId)) {
             return Result.error("无权删除该相册");
         }
-        
         try {
             albumService.deleteAlbum(id);
             return Result.success("相册已删除，照片已移至垃圾桶");

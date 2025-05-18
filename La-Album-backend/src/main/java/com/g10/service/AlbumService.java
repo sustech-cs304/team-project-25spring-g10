@@ -51,20 +51,37 @@ public class AlbumService {
         return photoRepository.findByAlbumId(albumId);
     }
 
-    //    TODO: 把属于这个album的照片放到trashBin里
     @Transactional
     public void deleteAlbum(Long albumId) {
         Album album = albumRepository.findById(albumId)
                 .orElseThrow(() -> new RuntimeException("Album not found"));
+        Album defaultAlbum = getDefaultAlbumForUser(album.getUser().getId());
 
-        // 处理照片：移动到 TrashBin
+        if (album.getId().equals(defaultAlbum.getId())) {
+            throw new RuntimeException("默认相册不能被删除");
+        }
+
+        // 找到所有引用该 album 的 TrashedPhoto，并删除或断开引用
+        List<TrashedPhoto> referencingTrashedPhotos =
+                trashedPhotoRepository.findByOriginalAlbum(album);
+        for (TrashedPhoto tp : referencingTrashedPhotos) {
+            tp.setOriginalAlbum(defaultAlbum);
+        }
+        trashedPhotoRepository.saveAll(referencingTrashedPhotos);
+
+        // move photos to trashBin, the original album of trashed photo will be default album
         for (Photo photo : album.getPhotos()) {
             TrashedPhoto trashed = new TrashedPhoto(photo);
+            trashed.setOriginalAlbum(defaultAlbum);
             trashedPhotoRepository.save(trashed);
             photoRepository.delete(photo);
         }
-
-        // 删除相册（级联删除照片）
+        album.setUser(null);
         albumRepository.delete(album);
+    }
+
+
+    public Album getDefaultAlbumForUser(Long userId) {
+        return albumRepository.findByUserIdAndTitle(userId, "Default Album");
     }
 }
