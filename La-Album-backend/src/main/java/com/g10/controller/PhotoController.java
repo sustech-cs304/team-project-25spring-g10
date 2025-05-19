@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.http.HttpStatus;
 import java.util.List;
 import java.util.Optional;
 
@@ -214,8 +214,7 @@ public class PhotoController {
         }
     }
 
-    // 图像代理端点，用于解决跨域问题
-    @GetMapping("/proxy")
+   @GetMapping("/proxy")
     public ResponseEntity<byte[]> proxyImage(@RequestParam("key") String key) {
         try {
             String signedUrl = ossUtil.generateSignedUrl(key);
@@ -225,8 +224,8 @@ public class PhotoController {
                     .header("Access-Control-Allow-Origin", "*")
                     .body(imageData);
         } catch (Exception e) {
-            System.out.println("图像代理错误: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
 }

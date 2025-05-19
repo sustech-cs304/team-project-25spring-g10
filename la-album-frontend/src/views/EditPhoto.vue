@@ -1,4 +1,5 @@
 <template>
+
   <div class="edit-photo">
     <div class="header">
       <h1>编辑照片</h1>
@@ -27,8 +28,8 @@
 
     <div v-else class="content">
       <div class="editor-section">
-        <image-editor
-          :image-url="photo.url"
+        <image-editor v-if="signedBlobUrl"
+          :image-url="signedBlobUrl"
           :alt="photo.title"
           :initial-adjustments="initialAdjustments"
           @preview-updated="handlePreviewUpdate"
@@ -179,7 +180,8 @@ export default {
         flipV: false
       },
       editedFile: null,
-      editedFilename: ''
+      editedFilename: '',
+      signedBlobUrl: ''
     }
   },
   computed: {
@@ -203,6 +205,19 @@ export default {
     this.loadData();
   },
   methods: {
+    async getProxiedBlobUrl(key) {
+      const token = localStorage.getItem('token');
+      const encodedKey = encodeURIComponent(key);
+      const res = await fetch(`/api/photos/proxy?key=${encodedKey}`, {
+        headers: {
+          'Authorization': `${token}`
+        }
+      });
+      if (!res.ok) throw new Error('图片代理失败');
+      const blob = await res.blob();
+      // console.log('👉 Blob 类型:', blob.type);
+      return URL.createObjectURL(blob); // ✔️ 本地可用 URL
+    },
     async loadData() {
       try {
         this.loading = true;
@@ -229,6 +244,11 @@ export default {
         if (!photoResponse.ok) throw new Error('加载照片失败');
         const photoData = await photoResponse.json();
         console.log('照片数据:', photoData);
+        // console.log(photoData.url);
+        const rawKey = photoData.url.split('.com/')[1].split('?')[0];
+        // console.log(rawKey);
+        this.signedBlobUrl = await this.getProxiedBlobUrl(rawKey);
+        console.log(this.signedBlobUrl);
         
         // 加载相册列表
         const albumsResponse = await fetch('/api/albums', {
@@ -249,16 +269,13 @@ export default {
         this.photo = {
           ...photoData,
           date: this.formatDate(photoData.date),
-          tags: photoData.tags || []
+          tags: photoData.tags || [],
         };
         
         // 确保 URL 是完整的
         if (this.photo.url && !this.photo.url.startsWith('http')) {
           this.photo.url = `/api${this.photo.url}`;
         }
-        
-        console.log('设置照片URL:', this.photo.url);
-        
         this.albums = albumsData;
       } catch (error) {
         console.error('加载数据失败:', error);
@@ -368,7 +385,6 @@ export default {
 
 <style scoped>
 .edit-photo {
-  padding: 20px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -483,6 +499,8 @@ export default {
   background: white;
   border-radius: 8px;
   overflow: hidden;
+  flex: 1;
+  display: flex;
 }
 
 .info-section {
