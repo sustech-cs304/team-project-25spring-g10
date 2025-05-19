@@ -12,7 +12,13 @@
           <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
         </div>
         <div class="progress-time">
-          {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+          {{ formatTime(currentTime) }} / {{ formatTime(totalDuration) }}
+        </div>
+      </div>
+      
+      <div class="slider-info">
+        <div class="photo-info">
+          照片 {{ currentIndex + 1 }}/{{ photos.length }}
         </div>
       </div>
       
@@ -35,6 +41,9 @@
         </button>
       </div>
     </div>
+    
+    <!-- 添加背景音乐播放器 -->
+    <audio ref="backgroundMusic" loop></audio>
   </div>
 </template>
 
@@ -53,11 +62,15 @@ const props = defineProps({
   },
   duration: {
     type: Number,
-    default: 10 // 默认30秒
+    default: 10
   },
   autoplay: {
     type: Boolean,
     default: false
+  },
+  bgmUrl: {
+    type: String,
+    default: ''
   }
 });
 
@@ -65,20 +78,56 @@ const emit = defineEmits(['update:currentTime', 'ended']);
 
 const slider = ref(null);
 const container = ref(null);
+const backgroundMusic = ref(null);
 const isPlaying = ref(false);
 const currentIndex = ref(0);
 const currentTime = ref(0);
 const intervalId = ref(null);
 
-// 每张照片显示的时间（秒）
-const photoDisplayTime = computed(() => {
+// 照片的累计显示时间（用于计算当前应该显示哪张照片）
+const cumulativePhotoTimes = computed(() => {
+  const times = [];
+  let cumulativeTime = 0;
+  
+  // 如果所有照片都没有displayDuration，使用均分总时长的方式计算
+  const hasDisplayDurations = props.photos.some(photo => parseInt(photo.displayDuration) > 0);
+  
+  if (!hasDisplayDurations && props.photos.length > 0) {
+    // 每张照片均分总时长
+    const perPhotoTime = Math.floor(props.duration / props.photos.length);
+    
+    props.photos.forEach(() => {
+      cumulativeTime += perPhotoTime;
+      times.push(cumulativeTime);
+    });
+  } else {
+    // 使用每张照片的displayDuration，如果没有则默认为0
+    props.photos.forEach((photo) => {
+      const displayTime = parseInt(photo.displayDuration) || 0;
+      cumulativeTime += displayTime;
+      times.push(cumulativeTime);
+    });
+  }
+  
+  return times;
+});
+
+// 总时长现在是所有照片显示时长的总和
+const totalDuration = computed(() => {
   if (props.photos.length === 0) return 0;
-  return 2;
+  
+  // 使用照片时长总和
+  const calculatedDuration = props.photos.reduce((total, photo) => {
+    return total + (parseInt(photo.displayDuration) || 0); // 如果照片没有时长，不提供默认值
+  }, 0);
+  
+  // 如果计算出来的总时长为0，使用传入的props.duration
+  return calculatedDuration > 0 ? calculatedDuration : props.duration;
 });
 
 // 进度百分比
 const progress = computed(() => {
-  return (currentTime.value / props.duration) * 100;
+  return (currentTime.value / totalDuration.value) * 100;
 });
 
 // 格式化时间为 MM:SS
@@ -88,23 +137,75 @@ const formatTime = (seconds) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
+// 获取当前应该显示的照片索引
+const getCurrentPhotoIndex = (currentTime) => {
+  // 找到第一个累计时间大于当前时间的索引
+  const index = cumulativePhotoTimes.value.findIndex(time => time > currentTime);
+  
+  // 如果找不到（比如已经到最后），则显示最后一张
+  return index === -1 ? props.photos.length - 1 : index;
+};
+
 // 开始播放
 const startSlider = () => {
   if (intervalId.value) clearInterval(intervalId.value);
   
   isPlaying.value = true;
   
+  // 播放背景音乐
+  if (backgroundMusic.value && props.bgmUrl) {
+    console.log('尝试播放背景音乐:', props.bgmUrl);
+    try {
+      // 为了确保音频能正确加载，使用字符串形式的URL
+      let audioSrc = props.bgmUrl;
+      if (typeof audioSrc === 'object' && audioSrc.default) {
+        audioSrc = audioSrc.default; // 处理webpack require加载的资源
+      }
+      
+      backgroundMusic.value.src = audioSrc;
+      backgroundMusic.value.volume = 0.5; // 设置适当的音量
+      
+      // 添加canplaythrough事件监听，确保音频加载完成后再播放
+      backgroundMusic.value.oncanplaythrough = () => {
+        console.log('背景音乐已加载完成，准备播放');
+        backgroundMusic.value.play()
+          .then(() => {
+            console.log('背景音乐播放成功');
+          })
+          .catch(error => {
+            console.error('背景音乐播放失败:', error);
+          });
+      };
+      
+      // 添加错误处理
+      backgroundMusic.value.onerror = (e) => {
+        console.error('背景音乐加载失败:', e);
+      };
+      
+      // 如果已经缓存，可能不会触发canplaythrough事件，所以尝试直接播放
+      if (backgroundMusic.value.readyState >= 3) { // HAVE_FUTURE_DATA
+        backgroundMusic.value.play()
+          .then(() => console.log('背景音乐直接播放成功'))
+          .catch(error => console.error('直接播放失败:', error));
+      }
+    } catch (error) {
+      console.error('设置背景音乐失败:', error);
+    }
+  } else {
+    console.log('无法播放背景音乐', {
+      audioElement: !!backgroundMusic.value,
+      bgmUrl: props.bgmUrl
+    });
+  }
+  
   // 每100毫秒更新一次时间和进度
   intervalId.value = setInterval(() => {
-    if (currentTime.value < props.duration) {
+    if (currentTime.value < totalDuration.value) {
       currentTime.value += 0.1;
       emit('update:currentTime', currentTime.value);
       
-      // 检查是否需要切换照片
-      const expectedIndex = Math.min(
-        Math.floor(currentTime.value / photoDisplayTime.value),
-        props.photos.length - 1
-      );
+      // 根据当前时间确定应该显示哪张照片
+      const expectedIndex = getCurrentPhotoIndex(currentTime.value);
       
       if (expectedIndex !== currentIndex.value) {
         currentIndex.value = expectedIndex;
@@ -123,6 +224,12 @@ const stopSlider = () => {
     clearInterval(intervalId.value);
     intervalId.value = null;
   }
+  
+  // 暂停背景音乐
+  if (backgroundMusic.value) {
+    backgroundMusic.value.pause();
+  }
+  
   isPlaying.value = false;
 };
 
@@ -141,6 +248,11 @@ const restart = () => {
   currentIndex.value = 0;
   emit('update:currentTime', 0);
   
+  // 重置背景音乐
+  if (backgroundMusic.value) {
+    backgroundMusic.value.currentTime = 0;
+  }
+  
   if (isPlaying.value) {
     stopSlider();
     startSlider();
@@ -152,11 +264,7 @@ const setCurrentTime = (time) => {
   currentTime.value = time;
   
   // 更新当前索引
-  const expectedIndex = Math.min(
-    Math.floor(currentTime.value / photoDisplayTime.value),
-    props.photos.length - 1
-  );
-  
+  const expectedIndex = getCurrentPhotoIndex(currentTime.value);
   currentIndex.value = expectedIndex;
 };
 
@@ -187,6 +295,18 @@ onMounted(() => {
 // 组件卸载时，停止播放
 onBeforeUnmount(() => {
   stopSlider();
+});
+
+// 监听bgmUrl的变化
+watch(() => props.bgmUrl, (newValue) => {
+  if (backgroundMusic.value && newValue) {
+    backgroundMusic.value.src = newValue;
+    if (isPlaying.value) {
+      backgroundMusic.value.play().catch(error => {
+        console.error('背景音乐播放失败:', error);
+      });
+    }
+  }
 });
 </script>
 
@@ -265,6 +385,24 @@ onBeforeUnmount(() => {
   font-size: 0.75rem;
   min-width: 80px;
   text-align: right;
+}
+
+.slider-info {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.photo-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.duration-badge {
+  display: none !important;
 }
 
 .slider-buttons {

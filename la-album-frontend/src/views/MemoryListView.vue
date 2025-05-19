@@ -79,10 +79,10 @@
 
     <!-- 创建回忆视频弹窗 -->
     <div v-if="showCreateModal" class="modal-backdrop">
-      <div class="modal-container">
+      <div class="modal-container modal-lg">
         <div class="modal-header">
           <h2>创建回忆视频</h2>
-          <button class="btn-close" @click="showCreateModal = false">
+          <button class="btn-close" @click="closeCreateMemoryModal">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -90,62 +90,100 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label for="memory-title">视频标题</label>
-            <input
-              type="text"
-              id="memory-title"
-              v-model="newMemory.title"
-              placeholder="给回忆起个名字"
-              class="form-input"
-              required
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="album-select">选择相册</label>
-            <select id="album-select" v-model="newMemory.albumId" class="form-select" required>
-              <option value="" disabled>请选择相册</option>
-              <option v-for="album in albums" :key="album.id" :value="album.id">
-                {{ album.name }} ({{ album.photoCount }}张照片)
-              </option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="bgm-select">背景音乐</label>
-            <select id="bgm-select" v-model="newMemory.bgmId" class="form-select">
-              <option value="" disabled>请选择背景音乐</option>
-              <option v-for="bgm in backgroundMusic" :key="bgm.id" :value="bgm.id">
-                {{ bgm.name }}
-              </option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="style-select">视频风格</label>
-            <select id="style-select" v-model="newMemory.style" class="form-select">
-              <option value="classic">经典</option>
-              <option value="dynamic">动感</option>
-              <option value="romantic">浪漫</option>
-              <option value="retro">复古</option>
-              <option value="minimal">简约</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="transition-select">转场效果</label>
-            <select id="transition-select" v-model="newMemory.transition" class="form-select">
-              <option value="fade">淡入淡出</option>
-              <option value="slide">滑动</option>
-              <option value="zoom">缩放</option>
-              <option value="rotate">旋转</option>
-              <option value="random">随机</option>
-            </select>
+          <div class="form-layout">
+            <div class="form-main">
+              <div class="form-group">
+                <label for="memory-title">视频标题</label>
+                <input
+                  type="text"
+                  id="memory-title"
+                  v-model="newMemory.title"
+                  placeholder="给回忆起个名字"
+                  class="form-input"
+                  required
+                />
+              </div>
+              
+              <div class="form-group">
+                <label for="album-select">选择相册</label>
+                <select 
+                  id="album-select" 
+                  v-model="newMemory.albumId" 
+                  class="form-select" 
+                  required
+                  @change="onAlbumChange"
+                >
+                  <option value="" disabled>请选择相册</option>
+                  <option v-for="album in albums" :key="album.id" :value="album.id">
+                    {{ album.name }} ({{ album.photoCount }}张照片)
+                  </option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <MusicSelector
+                  ref="musicSelector"
+                  :music-list="backgroundMusic"
+                  v-model="newMemory.bgmId"
+                />
+              </div>
+              
+              <div class="form-group">
+                <label for="style-select">视频风格</label>
+                <select id="style-select" v-model="newMemory.style" class="form-select">
+                  <option value="classic">经典</option>
+                  <option value="dynamic">动感</option>
+                  <option value="romantic">浪漫</option>
+                  <option value="retro">复古</option>
+                  <option value="minimal">简约</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="transition-select">转场效果</label>
+                <select id="transition-select" v-model="newMemory.transition" class="form-select">
+                  <option value="fade">淡入淡出</option>
+                  <option value="slide">滑动</option>
+                  <option value="zoom">缩放</option>
+                  <option value="rotate">旋转</option>
+                  <option value="random">随机</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-photo-settings" v-if="selectedAlbumPhotos.length > 0">
+              <h3>照片设置</h3>
+              <p class="info-text">为每张照片设置显示时长（秒）</p>
+              
+              <div class="total-duration" v-if="selectedAlbumPhotos.length > 0">
+                <p>视频总时长: {{ formatDuration(calculateTotalDuration()) }}</p>
+                <button class="btn btn-sm" @click="resetPhotoDurations">重置时长</button>
+              </div>
+              
+              <div class="photos-list">
+                <div v-for="(photo, index) in selectedAlbumPhotos" :key="photo.id" class="photo-item">
+                  <div class="photo-thumbnail">
+                    <img :src="photo.thumbnailUrl" :alt="photo.name" />
+                    <div class="photo-order">{{ index + 1 }}</div>
+                  </div>
+                  <div class="photo-duration">
+                    <label :for="`duration-${photo.id}`">显示时长 (秒):</label>
+                    <input 
+                      type="number" 
+                      :id="`duration-${photo.id}`"
+                      v-model="newMemory.photoDisplayDurations[photo.id]" 
+                      min="1" 
+                      max="60" 
+                      @change="updatePhotoDisplayDuration(photo.id, newMemory.photoDisplayDurations[photo.id])"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showCreateModal = false">取消</button>
+          <button class="btn btn-secondary" @click="closeCreateMemoryModal">取消</button>
           <button 
             class="btn btn-primary" 
             @click="createMemory" 
@@ -188,25 +226,27 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { fetchMemories, deleteMemory as apiDeleteMemory, generateMemory, fetchAlbums, fetchBgMusic } from '../api/mockMemory';
+import MusicSelector from '../components/memory/MusicSelector.vue';
 
 const router = useRouter();
 const memories = ref([]);
 const albums = ref([]);
+const backgroundMusic = ref([]);
 const loading = ref(true);
 const showCreateModal = ref(false);
 const showDeleteConfirm = ref(false);
 const memoryToDelete = ref(null);
 const isGenerating = ref(false);
-
-// 从模拟服务获取背景音乐
-const backgroundMusic = ref([]);
+const selectedAlbumPhotos = ref([]); // 存储选择的相册中的照片
+const musicSelector = ref(null);
 
 const newMemory = ref({
   title: '',
   albumId: '',
-  bgmId: 1,
+  bgmId: '',
   style: 'classic',
-  transition: 'fade'
+  transition: 'fade',
+  photoDisplayDurations: {} // 存储每张照片的显示时长
 });
 
 // 加载回忆视频列表
@@ -235,37 +275,191 @@ const loadAlbums = async () => {
 const loadBackgroundMusic = async () => {
   try {
     backgroundMusic.value = await fetchBgMusic();
+    
+    // 设置默认背景音乐
+    if (backgroundMusic.value.length > 0) {
+      newMemory.value.bgmId = backgroundMusic.value[0].id;
+    }
   } catch (error) {
     console.error('Failed to load background music:', error);
   }
 };
 
+// 当选择相册变化时，加载相册中的照片
+const onAlbumChange = async () => {
+  if (!newMemory.value.albumId) {
+    selectedAlbumPhotos.value = [];
+    return;
+  }
+  
+  try {
+    // 找到选中的相册
+    const album = albums.value.find(a => a.id === newMemory.value.albumId);
+    if (!album) return;
+    
+    // 清空已有的照片时长设置
+    newMemory.value.photoDisplayDurations = {};
+    
+    // 从API获取真实的相册照片
+    const { fetchAlbumById } = await import('../api/album');
+    const albumResponse = await fetchAlbumById(album.id);
+    
+    let albumPhotos = [];
+    if (albumResponse && albumResponse.photos && albumResponse.photos.length > 0) {
+      // 使用真实的相册照片
+      albumPhotos = albumResponse.photos.map(photo => ({
+        id: photo.id.toString(), // 确保ID是字符串
+        name: photo.title || '未命名照片',
+        thumbnailUrl: photo.url,
+        url: photo.url,
+        displayDuration: 5 // 默认5秒
+      }));
+    } else if (album.coverUrl) {
+      // 如果没有真实照片但有封面，创建模拟照片
+      for (let i = 0; i < Math.min(album.photoCount || 5, 10); i++) {
+        const photoId = `photo_${i + 1}_${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        albumPhotos.push({
+          id: photoId,
+          name: `照片 ${i + 1}`,
+          thumbnailUrl: album.coverUrl,
+          url: album.coverUrl,
+          displayDuration: 5
+        });
+      }
+    }
+    
+    // 设置默认显示时长并保存到newMemory中
+    albumPhotos.forEach(photo => {
+      newMemory.value.photoDisplayDurations[photo.id] = 5;
+    });
+    
+    selectedAlbumPhotos.value = albumPhotos;
+    console.log('已加载照片:', albumPhotos);
+    
+    // 计算并更新预计总时长
+    updateTotalDuration();
+  } catch (error) {
+    console.error('加载相册照片失败:', error);
+    // 出错时可以设置一些默认照片
+    selectedAlbumPhotos.value = [];
+  }
+};
+
+// 更新照片显示时长
+const updatePhotoDisplayDuration = (photoId, duration) => {
+  const parsedDuration = parseInt(duration);
+  if (isNaN(parsedDuration) || parsedDuration < 1) {
+    // 限制最小值为1秒
+    newMemory.value.photoDisplayDurations[photoId] = 1;
+  } else if (parsedDuration > 60) {
+    // 限制最大值为60秒
+    newMemory.value.photoDisplayDurations[photoId] = 60;
+  } else {
+    newMemory.value.photoDisplayDurations[photoId] = parsedDuration;
+  }
+  
+  // 更新总时长
+  updateTotalDuration();
+};
+
+// 计算总时长
+const calculateTotalDuration = () => {
+  if (selectedAlbumPhotos.value.length === 0) return 0;
+  
+  return selectedAlbumPhotos.value.reduce((total, photo) => {
+    return total + (parseInt(newMemory.value.photoDisplayDurations[photo.id]) || 0);
+  }, 0);
+};
+
+// 更新总时长
+const updateTotalDuration = () => {
+  // 确保所有照片都已设置时长
+  selectedAlbumPhotos.value.forEach(photo => {
+    if (newMemory.value.photoDisplayDurations[photo.id] === undefined) {
+      // 如果尚未设置，使用默认值5秒
+      newMemory.value.photoDisplayDurations[photo.id] = 5;
+    }
+  });
+};
+
+// 重置所有照片的显示时长
+const resetPhotoDurations = () => {
+  selectedAlbumPhotos.value.forEach(photo => {
+    newMemory.value.photoDisplayDurations[photo.id] = 5;
+  });
+};
+
 // 打开创建回忆视频弹窗
 const openCreateMemoryModal = () => {
-  showCreateModal.value = true;
-  // 重置表单
+  // 如果上次弹窗没有正确关闭，可能还有音乐在播放
+  if (musicSelector.value) {
+    musicSelector.value.stopPreview();
+  }
+  
   newMemory.value = {
     title: '',
     albumId: '',
-    bgmId: 1,
+    bgmId: backgroundMusic.value.length > 0 ? backgroundMusic.value[0].id : '',
     style: 'classic',
-    transition: 'fade'
+    transition: 'fade',
+    photoDisplayDurations: {}
   };
+  selectedAlbumPhotos.value = [];
+  showCreateModal.value = true;
+};
+
+// 关闭创建回忆视频弹窗
+const closeCreateMemoryModal = () => {
+  // 停止音乐预览
+  if (musicSelector.value) {
+    musicSelector.value.stopPreview();
+  }
+  showCreateModal.value = false;
 };
 
 // 创建回忆视频
 const createMemory = async () => {
   if (!newMemory.value.title || !newMemory.value.albumId) return;
   
+  // 停止音乐预览
+  if (musicSelector.value) {
+    musicSelector.value.stopPreview();
+  }
+  
   isGenerating.value = true;
   try {
-    await generateMemory(newMemory.value);
-    showCreateModal.value = false;
+    // 确保selectedAlbumPhotos中的照片时长设置正确
+    selectedAlbumPhotos.value.forEach(photo => {
+      if (!newMemory.value.photoDisplayDurations[photo.id]) {
+        newMemory.value.photoDisplayDurations[photo.id] = 5;
+      }
+    });
+
+    // 打印一下传递的数据，方便调试
+    console.log('创建回忆的参数:', JSON.stringify({
+      title: newMemory.value.title,
+      albumId: newMemory.value.albumId,
+      photoIds: selectedAlbumPhotos.value.map(p => p.id),
+      photoDisplayDurations: newMemory.value.photoDisplayDurations
+    }));
+    
+    const memoryData = {
+      title: newMemory.value.title,
+      albumId: newMemory.value.albumId,
+      bgmId: newMemory.value.bgmId || 1,
+      style: newMemory.value.style,
+      transition: newMemory.value.transition,
+      photoIds: selectedAlbumPhotos.value.map(p => p.id), // 传递照片ID列表
+      photoDisplayDurations: newMemory.value.photoDisplayDurations
+    };
+    
+    await generateMemory(memoryData);
+    closeCreateMemoryModal();
     // 重新加载回忆列表
     await loadMemories();
   } catch (error) {
-    console.error('Failed to create memory:', error);
-    // 这里可以添加错误提示
+    console.error('创建回忆失败:', error);
+    alert('创建回忆失败，请稍后再试!');
   } finally {
     isGenerating.value = false;
   }
@@ -605,5 +799,117 @@ onMounted(() => {
   .memories-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.modal-lg {
+  width: 90%;
+  max-width: 1000px;
+}
+
+.form-layout {
+  display: flex;
+  gap: var(--space-lg);
+}
+
+.form-main {
+  flex: 1;
+  min-width: 280px;
+}
+
+.form-photo-settings {
+  flex: 2;
+  padding: var(--space-md);
+  background-color: var(--neutral-100);
+  border-radius: var(--radius-md);
+}
+
+.form-photo-settings h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-sm);
+  font-size: 1.1rem;
+}
+
+.info-text {
+  color: var(--neutral-600);
+  font-size: 0.9rem;
+  margin-bottom: var(--space-md);
+}
+
+.total-duration {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm);
+  background-color: var(--neutral-200);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-md);
+}
+
+.photos-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-md);
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: var(--space-sm);
+}
+
+.photo-item {
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.photo-thumbnail {
+  position: relative;
+  padding-top: 75%; /* 4:3 比例 */
+  overflow: hidden;
+}
+
+.photo-thumbnail img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-order {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.photo-duration {
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-duration label {
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.photo-duration input {
+  width: 100%;
+  padding: 4px;
+  text-align: center;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-sm);
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 0.8rem;
 }
 </style> 

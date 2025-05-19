@@ -66,6 +66,7 @@
             :transition="memory.transition"
             :duration="memory.duration"
             :autoplay="false"
+            :bgm-url="memory.bgmUrl || ''"
             @update:currentTime="onTimeUpdate"
             @ended="onVideoEnded"
           />
@@ -135,7 +136,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getMemoryById } from '../api/mockMemory';
 import ImageSlider from '../components/memory/ImageSlider.vue';
@@ -165,6 +166,25 @@ const loadMemory = async () => {
     const response = await getMemoryById(memoryId);
     memory.value = response;
     
+    // 添加调试日志
+    console.log('加载的记忆视频数据:', {
+      id: response.id,
+      title: response.title,
+      duration: response.duration,
+      photos: response.photos?.length || 0,
+      photoDetails: response.photos?.map(p => ({
+        id: p.id,
+        duration: p.displayDuration
+      })) || [],
+      bgmUrl: response.bgmUrl
+    });
+    
+    // 计算并验证总时长
+    const calculatedDuration = response.photos?.reduce((total, photo) => 
+      total + (parseInt(photo.displayDuration) || 0), 0) || 0;
+    
+    console.log(`记忆视频总时长: ${response.duration}秒, 计算得到的总时长: ${calculatedDuration}秒`);
+    
     // 如果有相关回忆数据，加载相关回忆
     if (response.relatedMemories) {
       relatedMemories.value = response.relatedMemories;
@@ -177,6 +197,8 @@ const loadMemory = async () => {
       // 一秒后自动播放
       setTimeout(() => {
         if (videoPlayer.value) {
+          console.log('准备自动播放视频，背景音乐URL:', memory.value.bgmUrl);
+          
           // 恢复上次播放位置
           const savedTime = localStorage.getItem(`memory_${route.params.id}_time`);
           if (savedTime && videoPlayer.value.setCurrentTime) {
@@ -270,6 +292,14 @@ const goBack = () => {
 
 onMounted(() => {
   loadMemory();
+});
+
+// 监听路由ID变化，重新加载记忆
+watch(() => route.params.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    console.log(`记忆ID从 ${oldId} 变更为 ${newId}，重新加载记忆数据`);
+    loadMemory();
+  }
 });
 
 onBeforeUnmount(() => {

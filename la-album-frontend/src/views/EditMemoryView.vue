@@ -56,12 +56,11 @@
             </div>
             
             <div class="form-group">
-              <label for="bgm">背景音乐</label>
-              <select id="bgm" v-model="editedMemory.bgmId" class="form-select">
-                <option v-for="bgm in backgroundMusic" :key="bgm.id" :value="bgm.id">
-                  {{ bgm.name }}
-                </option>
-              </select>
+              <MusicSelector
+                ref="musicSelector"
+                :music-list="backgroundMusic"
+                v-model="editedMemory.bgmId"
+              />
             </div>
             
             <div class="form-group">
@@ -94,9 +93,14 @@
                 ref="videoPlayer"
                 :photos="editedMemory.photos.filter(p => p.included)"
                 :transition="editedMemory.transition"
-                :duration="30"
+                :duration="calculateTotalDuration()"
                 :autoplay="false"
+                :bgm-url="getBgmUrlById(editedMemory.bgmId)"
               />
+            </div>
+            <div class="preview-info">
+              <p>总时长: {{ formatTime(calculateTotalDuration()) }}</p>
+              <p>包含照片: {{ editedMemory.photos.filter(p => p.included).length }} / {{ editedMemory.photos.length }}</p>
             </div>
             <div class="preview-actions">
               <button class="btn btn-primary" @click="regenerateVideo" :disabled="isRegenerating">
@@ -110,12 +114,20 @@
                   重新生成视频
                 </span>
               </button>
+              <button class="btn" @click="previewPlayback" v-if="videoPlayer">
+                <span v-if="isPlaying">
+                  暂停预览
+                </span>
+                <span v-else>
+                  播放预览
+                </span>
+              </button>
             </div>
           </div>
 
           <div class="form-section photo-management">
             <h2>照片管理</h2>
-            <p class="section-desc">拖动可调整照片顺序，勾选可选择要包含在视频中的照片</p>
+            <p class="section-desc">拖动可调整照片顺序，勾选可选择要包含在视频中的照片，设置每张照片的显示时长</p>
             
             <div class="photo-selection">
               <div 
@@ -145,14 +157,32 @@
                     </svg>
                   </div>
                 </div>
-                <div class="photo-order">{{ index + 1 }}</div>
+                <div class="photo-details">
+                  <div class="photo-order">{{ index + 1 }}</div>
+                  <div class="photo-duration">
+                    <label>显示时长 (秒):</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="60" 
+                      :value="photo.displayDuration"
+                      @input="updatePhotoDuration(photo, $event)" 
+                      @change="updateTotalDuration"
+                    />
+                  </div>
+                </div>
               </div>
+            </div>
+            
+            <div class="total-duration">
+              <p>视频总时长: {{ formatTime(calculateTotalDuration()) }}</p>
             </div>
             
             <div class="photo-actions">
               <button class="btn" @click="selectAllPhotos">全选</button>
               <button class="btn" @click="deselectAllPhotos">全不选</button>
               <button class="btn" @click="resetPhotoOrder">重置顺序</button>
+              <button class="btn" @click="resetPhotoDurations">重置时长</button>
             </div>
           </div>
         </div>
@@ -180,10 +210,12 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getMemoryById, updateMemory, fetchBgMusic } from '../api/mockMemory';
 import ImageSlider from '../components/memory/ImageSlider.vue';
+import MusicSelector from '../components/memory/MusicSelector.vue';
 
 const route = useRoute();
 const router = useRouter();
 const videoPlayer = ref(null);
+const musicSelector = ref(null);
 const memory = ref({});
 const editedMemory = ref({
   title: '',
@@ -198,6 +230,7 @@ const error = ref(false);
 const errorMessage = ref('');
 const isSaving = ref(false);
 const isRegenerating = ref(false);
+const isPlaying = ref(false);
 
 // 背景音乐列表
 const backgroundMusic = ref([]);
@@ -209,6 +242,14 @@ const loadBackgroundMusic = async () => {
   } catch (err) {
     console.error('加载背景音乐失败:', err);
   }
+};
+
+// 根据ID获取背景音乐URL
+const getBgmUrlById = (bgmId) => {
+  if (!backgroundMusic.value || backgroundMusic.value.length === 0) return '';
+  
+  const bgm = backgroundMusic.value.find(item => item.id === bgmId);
+  return bgm ? bgm.previewUrl : '';
 };
 
 // 加载回忆视频数据
@@ -234,12 +275,15 @@ const loadMemory = async () => {
       transition: response.transition,
       photos: response.photos ? response.photos.map(photo => ({
         ...photo,
-        included: true // 默认所有照片都包含
+        included: true,
+        displayDuration: photo.displayDuration // 使用原始时长，不设置默认值
       })) : []
     };
     
+    console.log('加载的记忆视频数据:', editedMemory.value);
+    
     // 保存原始照片顺序，用于重置
-    originalPhotos.value = [...editedMemory.value.photos];
+    originalPhotos.value = JSON.parse(JSON.stringify(editedMemory.value.photos));
     
     loading.value = false;
   } catch (err) {
@@ -254,6 +298,11 @@ const loadMemory = async () => {
 const saveChanges = async () => {
   if (!isFormValid.value) return;
   
+  // 停止音乐预览
+  if (musicSelector.value) {
+    musicSelector.value.stopPreview();
+  }
+  
   isSaving.value = true;
   try {
     // 准备提交数据
@@ -264,8 +313,14 @@ const saveChanges = async () => {
       transition: editedMemory.value.transition,
       photoIds: editedMemory.value.photos
         .filter(photo => photo.included)
-        .map(photo => photo.id)
+        .map(photo => photo.id),
+      photoDisplayDurations: {}
     };
+    
+    // 填充照片时长信息
+    editedMemory.value.photos.forEach(photo => {
+      memoryData.photoDisplayDurations[photo.id] = photo.displayDuration || 5;
+    });
     
     // 提交更新
     await updateMemory(route.params.id, memoryData);
@@ -288,23 +343,97 @@ const regenerateVideo = async () => {
   
   isRegenerating.value = true;
   try {
+    // 获取已包含照片的ID列表，保持当前顺序
+    const includedPhotos = editedMemory.value.photos.filter(photo => photo.included);
+    const orderedPhotoIds = includedPhotos.map(photo => photo.id);
+    
     // 准备提交数据
     const memoryData = {
       title: editedMemory.value.title,
       bgmId: editedMemory.value.bgmId,
       style: editedMemory.value.style,
       transition: editedMemory.value.transition,
-      photoIds: editedMemory.value.photos
-        .filter(photo => photo.included)
-        .map(photo => photo.id),
-      regenerate: true // 特殊标记，表示需要重新生成视频
+      photoIds: orderedPhotoIds,
+      regenerate: true,
+      photoDisplayDurations: {}
     };
     
-    // 提交更新
-    await updateMemory(route.params.id, memoryData);
+    // 填充照片时长信息
+    editedMemory.value.photos.forEach(photo => {
+      memoryData.photoDisplayDurations[photo.id] = photo.displayDuration;
+    });
     
-    // 更新成功后刷新页面或重新加载数据
-    await loadMemory();
+    console.log('重新生成视频的参数:', memoryData);
+    
+    // 提交更新
+    const updatedMemory = await updateMemory(route.params.id, memoryData);
+    
+    // 保存用户当前的编辑状态和照片顺序
+    const currentEdits = {
+      title: editedMemory.value.title,
+      bgmId: editedMemory.value.bgmId,
+      style: editedMemory.value.style,
+      transition: editedMemory.value.transition
+    };
+
+    // 创建一个映射，保存用户对每张照片的编辑
+    const photoEdits = {};
+    const photoOrderMap = {}; // 映射照片ID到当前顺序
+    
+    // 记录当前照片的索引位置
+    editedMemory.value.photos.forEach((photo, index) => {
+      photoEdits[photo.id] = {
+        included: photo.included,
+        displayDuration: parseInt(photo.displayDuration) || 5
+      };
+      photoOrderMap[photo.id] = index;
+    });
+    
+    // 更新本地内存数据
+    memory.value = updatedMemory;
+    
+    // 使用更新后的数据，但保留用户的编辑和排序
+    const updatedPhotos = [...updatedMemory.photos];
+    
+    // 根据用户当前的排序重新排列照片
+    if (orderedPhotoIds.length > 0) {
+      updatedPhotos.sort((a, b) => {
+        const indexA = orderedPhotoIds.indexOf(a.id);
+        const indexB = orderedPhotoIds.indexOf(b.id);
+        
+        // 如果两个ID都在orderedPhotoIds中，按照它们在orderedPhotoIds中的顺序排序
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB;
+        }
+        
+        // 如果只有一个ID在orderedPhotoIds中，将其排在前面
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        
+        // 如果两个ID都不在orderedPhotoIds中，保持原来的顺序
+        return 0;
+      });
+    }
+    
+    // 更新编辑的记忆对象
+    editedMemory.value = {
+      ...currentEdits,
+      photos: updatedPhotos.map(photo => ({
+        ...photo,
+        // 如果用户之前编辑过这张照片，使用用户的设置
+        included: photoEdits[photo.id] ? photoEdits[photo.id].included : true,
+        displayDuration: photoEdits[photo.id] ? photoEdits[photo.id].displayDuration : photo.displayDuration
+      }))
+    };
+    
+    // 保存原始照片顺序，用于重置
+    originalPhotos.value = JSON.parse(JSON.stringify(editedMemory.value.photos));
+    
+    // 更新视频播放器
+    if (videoPlayer.value) {
+      videoPlayer.value.restart();
+    }
+    
     alert('视频已重新生成');
   } catch (err) {
     console.error('重新生成视频失败:', err);
@@ -353,6 +482,37 @@ const resetPhotoOrder = () => {
   editedMemory.value.photos = [...originalPhotos.value];
 };
 
+// 计算总时长
+const calculateTotalDuration = () => {
+  const includedPhotos = editedMemory.value.photos.filter(photo => photo.included);
+  return includedPhotos.reduce((total, photo) => total + (parseInt(photo.displayDuration) || 0), 0);
+};
+
+// 更新总时长
+const updateTotalDuration = () => {
+  // 忽略照片ID格式无效的警告，仅处理有效照片
+  console.log('更新总时长');
+};
+
+// 格式化时间为 MM:SS
+const formatTime = (seconds) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// 重置所有照片的显示时长
+const resetPhotoDurations = () => {
+  // 使用原始照片的时长
+  editedMemory.value.photos.forEach(photo => {
+    const originalPhoto = originalPhotos.value.find(p => p.id === photo.id);
+    if (originalPhoto) {
+      photo.displayDuration = originalPhoto.displayDuration;
+    }
+  });
+  updateTotalDuration();
+};
+
 // 表单有效性检查
 const isFormValid = computed(() => {
   return (
@@ -363,7 +523,25 @@ const isFormValid = computed(() => {
 
 // 返回上一页
 const goBack = () => {
+  // 停止音乐预览
+  if (musicSelector.value) {
+    musicSelector.value.stopPreview();
+  }
+  
   router.back();
+};
+
+// 播放/暂停预览
+const previewPlayback = () => {
+  if (!videoPlayer.value) return;
+  
+  if (isPlaying.value) {
+    videoPlayer.value.pause();
+    isPlaying.value = false;
+  } else {
+    videoPlayer.value.play();
+    isPlaying.value = true;
+  }
 };
 
 // 监听照片选择变化，更新预览
@@ -373,6 +551,17 @@ watch(() => editedMemory.value.photos, () => {
     videoPlayer.value.restart();
   }
 }, { deep: true });
+
+// 更新特定照片的显示时长
+const updatePhotoDuration = (photo, event) => {
+  const value = parseInt(event.target.value);
+  if (!isNaN(value)) {
+    // 确保值在1-60之间
+    photo.displayDuration = Math.max(1, Math.min(60, value));
+    console.log(`更新照片 ${photo.id} 的时长为 ${photo.displayDuration}秒`);
+  }
+  // 如果无效，保留原值，不修改
+};
 
 onMounted(() => {
   loadMemory();
@@ -528,9 +717,22 @@ onMounted(() => {
   height: 300px; /* 设置固定高度 */
 }
 
+.preview-info {
+  display: flex;
+  justify-content: space-between;
+  margin: var(--space-sm) 0;
+  font-size: 0.9rem;
+  color: var(--neutral-600);
+}
+
+.preview-info p {
+  margin: 0;
+}
+
 .preview-actions {
   display: flex;
   justify-content: center;
+  gap: var(--space-md);
 }
 
 .photo-selection {
@@ -646,12 +848,44 @@ onMounted(() => {
   transform: rotate(45deg);
 }
 
+.photo-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  width: 100%;
+}
+
 .photo-order {
-  padding: var(--space-xs);
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.photo-duration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.photo-duration label {
+  font-size: 0.8rem;
+  margin-bottom: 3px;
+}
+
+.photo-duration input {
+  width: 60px;
   text-align: center;
-  background-color: white;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 4px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+
+.total-duration {
+  margin: 15px 0;
+  text-align: right;
+  font-weight: bold;
 }
 
 .photo-actions {
