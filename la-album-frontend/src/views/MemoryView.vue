@@ -91,8 +91,8 @@
                   <span class="info-value">{{ memory.bgmName }}</span>
                 </div>
                 <div class="info-item">
-                  <span class="info-label">视频风格</span>
-                  <span class="info-value">{{ formatStyle(memory.style) }}</span>
+                  <span class="info-label">转场效果</span>
+                  <span class="info-value">{{ formatTransition(memory.transition) }}</span>
                 </div>
               </div>
             </div>
@@ -253,16 +253,16 @@ const formatDate = (dateString) => {
 };
 
 // 格式化风格名称
-const formatStyle = (style) => {
-  const styleMap = {
-    'classic': '经典',
-    'dynamic': '动感',
-    'romantic': '浪漫',
-    'retro': '复古',
-    'minimal': '简约'
+const formatTransition = (transition) => {
+  const transitionMap = {
+    'fade': '淡入淡出',
+    'slide': '滑动',
+    'zoom': '缩放',
+    'rotate': '旋转',
+    'random': '随机'
   };
   
-  return styleMap[style] || style;
+  return transitionMap[transition] || transition;
 };
 
 // 编辑回忆视频

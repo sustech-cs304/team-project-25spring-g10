@@ -64,17 +64,6 @@
             </div>
             
             <div class="form-group">
-              <label for="style">视频风格</label>
-              <select id="style" v-model="editedMemory.style" class="form-select">
-                <option value="classic">经典</option>
-                <option value="dynamic">动感</option>
-                <option value="romantic">浪漫</option>
-                <option value="retro">复古</option>
-                <option value="minimal">简约</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
               <label for="transition">转场效果</label>
               <select id="transition" v-model="editedMemory.transition" class="form-select">
                 <option value="fade">淡入淡出</option>
@@ -220,7 +209,6 @@ const memory = ref({});
 const editedMemory = ref({
   title: '',
   bgmId: 1,
-  style: 'classic',
   transition: 'fade',
   photos: []
 });
@@ -271,7 +259,6 @@ const loadMemory = async () => {
     editedMemory.value = {
       title: response.title,
       bgmId: response.bgmId,
-      style: response.style,
       transition: response.transition,
       photos: response.photos ? response.photos.map(photo => ({
         ...photo,
@@ -309,7 +296,6 @@ const saveChanges = async () => {
     const memoryData = {
       title: editedMemory.value.title,
       bgmId: editedMemory.value.bgmId,
-      style: editedMemory.value.style,
       transition: editedMemory.value.transition,
       photoIds: editedMemory.value.photos
         .filter(photo => photo.included)
@@ -351,7 +337,6 @@ const regenerateVideo = async () => {
     const memoryData = {
       title: editedMemory.value.title,
       bgmId: editedMemory.value.bgmId,
-      style: editedMemory.value.style,
       transition: editedMemory.value.transition,
       photoIds: orderedPhotoIds,
       regenerate: true,
@@ -372,7 +357,6 @@ const regenerateVideo = async () => {
     const currentEdits = {
       title: editedMemory.value.title,
       bgmId: editedMemory.value.bgmId,
-      style: editedMemory.value.style,
       transition: editedMemory.value.transition
     };
 

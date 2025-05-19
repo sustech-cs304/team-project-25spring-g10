@@ -346,8 +346,11 @@ export const generateMemory = async (data) => {
   try {
     if (data.albumId) {
       const albumResponse = await fetchAlbumById(data.albumId);
-      if (albumResponse && albumResponse.code === 0 && albumResponse.data) {
-        albumName = albumResponse.data.title;
+      console.log('获取相册信息，相册响应数据:', albumResponse);
+      
+      // 直接从响应中获取标题
+      if (albumResponse && albumResponse.title) {
+        albumName = albumResponse.title;
       }
     }
   } catch (error) {
@@ -385,7 +388,6 @@ export const generateMemory = async (data) => {
         bgmId: data.bgmId || 1,
         bgmName: bgm ? bgm.name : '默认音乐',
         bgmUrl: bgm ? bgm.previewUrl : null,
-        style: data.style || 'classic',
         transition: data.transition || 'fade',
         createdAt: new Date().toISOString(),
         photoCount: selectedPhotos.length,
@@ -428,7 +430,6 @@ export const updateMemory = async (id, data) => {
   memory.bgmName = bgm ? bgm.name : '默认音乐';
   memory.bgmUrl = bgm ? bgm.previewUrl : null;
   
-  memory.style = data.style || memory.style;
   memory.transition = data.transition || memory.transition;
   
   // 更新照片显示时长

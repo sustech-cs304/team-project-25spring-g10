@@ -129,17 +129,6 @@
               </div>
               
               <div class="form-group">
-                <label for="style-select">视频风格</label>
-                <select id="style-select" v-model="newMemory.style" class="form-select">
-                  <option value="classic">经典</option>
-                  <option value="dynamic">动感</option>
-                  <option value="romantic">浪漫</option>
-                  <option value="retro">复古</option>
-                  <option value="minimal">简约</option>
-                </select>
-              </div>
-              
-              <div class="form-group">
                 <label for="transition-select">转场效果</label>
                 <select id="transition-select" v-model="newMemory.transition" class="form-select">
                   <option value="fade">淡入淡出</option>
@@ -244,7 +233,6 @@ const newMemory = ref({
   title: '',
   albumId: '',
   bgmId: '',
-  style: 'classic',
   transition: 'fade',
   photoDisplayDurations: {} // 存储每张照片的显示时长
 });
@@ -400,7 +388,6 @@ const openCreateMemoryModal = () => {
     title: '',
     albumId: '',
     bgmId: backgroundMusic.value.length > 0 ? backgroundMusic.value[0].id : '',
-    style: 'classic',
     transition: 'fade',
     photoDisplayDurations: {}
   };
@@ -447,7 +434,6 @@ const createMemory = async () => {
       title: newMemory.value.title,
       albumId: newMemory.value.albumId,
       bgmId: newMemory.value.bgmId || 1,
-      style: newMemory.value.style,
       transition: newMemory.value.transition,
       photoIds: selectedAlbumPhotos.value.map(p => p.id), // 传递照片ID列表
       photoDisplayDurations: newMemory.value.photoDisplayDurations

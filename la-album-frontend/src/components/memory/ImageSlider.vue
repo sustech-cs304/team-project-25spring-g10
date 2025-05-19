@@ -1,7 +1,18 @@
 <template>
   <div class="image-slider" ref="slider">
     <div class="slider-container" ref="container">
-      <div v-for="(photo, index) in photos" :key="photo.id" class="slide" :class="{ active: index === currentIndex }">
+      <!-- 照片幻灯片 -->
+      <div v-for="(photo, index) in photos" :key="photo.id" 
+           class="slide" 
+           :class="{ 
+             active: index === currentIndex,
+             'transition-fade': transition === 'fade',
+             'transition-slide': transition === 'slide',
+             'transition-zoom': transition === 'zoom',
+             'transition-rotate': transition === 'rotate'
+           }"
+           :style="getTransitionStyle(index)"
+      >
         <img :src="photo.url || photo.thumbnailUrl" :alt="photo.name || `照片 ${index + 1}`" />
       </div>
     </div>
@@ -83,6 +94,63 @@ const isPlaying = ref(false);
 const currentIndex = ref(0);
 const currentTime = ref(0);
 const intervalId = ref(null);
+const previousIndex = ref(0); // 跟踪前一张照片的索引，用于确定转场方向
+
+// 根据索引和转场类型计算转场样式
+const getTransitionStyle = (index) => {
+  if (props.transition === 'slide') {
+    // 滑动效果：当前照片从右侧滑入，前一张照片从左侧滑出
+    const direction = index > previousIndex.value ? 1 : -1;
+    
+    if (index === currentIndex.value) {
+      // 当前照片
+      return {
+        transform: 'translateX(0)',
+        zIndex: '10'
+      };
+    } else if (index === previousIndex.value && previousIndex.value !== currentIndex.value) {
+      // 前一张照片
+      return {
+        transform: `translateX(${-100 * direction}%)`,
+        zIndex: '9'
+      };
+    }
+  } else if (props.transition === 'zoom') {
+    // 缩放效果
+    if (index === currentIndex.value) {
+      // 当前照片
+      return {
+        transform: 'scale(1)',
+        zIndex: '10'
+      };
+    } else if (index === previousIndex.value && previousIndex.value !== currentIndex.value) {
+      // 前一张照片
+      return {
+        transform: 'scale(0.8)',
+        opacity: '0',
+        zIndex: '9'
+      };
+    }
+  } else if (props.transition === 'rotate') {
+    // 旋转效果
+    if (index === currentIndex.value) {
+      // 当前照片
+      return {
+        transform: 'rotate(0deg)',
+        zIndex: '10'
+      };
+    } else if (index === previousIndex.value && previousIndex.value !== currentIndex.value) {
+      // 前一张照片
+      return {
+        transform: 'rotate(90deg)',
+        opacity: '0',
+        zIndex: '9'
+      };
+    }
+  }
+  
+  return {}; // 默认返回空对象
+};
 
 // 照片的累计显示时间（用于计算当前应该显示哪张照片）
 const cumulativePhotoTimes = computed(() => {
@@ -208,6 +276,9 @@ const startSlider = () => {
       const expectedIndex = getCurrentPhotoIndex(currentTime.value);
       
       if (expectedIndex !== currentIndex.value) {
+        // 存储前一张照片的索引，用于转场效果
+        previousIndex.value = currentIndex.value;
+        // 更新当前索引
         currentIndex.value = expectedIndex;
       }
     } else {
@@ -245,6 +316,7 @@ const togglePlay = () => {
 // 重新开始播放
 const restart = () => {
   currentTime.value = 0;
+  previousIndex.value = 0;
   currentIndex.value = 0;
   emit('update:currentTime', 0);
   
@@ -265,7 +337,11 @@ const setCurrentTime = (time) => {
   
   // 更新当前索引
   const expectedIndex = getCurrentPhotoIndex(currentTime.value);
-  currentIndex.value = expectedIndex;
+  
+  if (expectedIndex !== currentIndex.value) {
+    previousIndex.value = currentIndex.value;
+    currentIndex.value = expectedIndex;
+  }
 };
 
 // 导出方法给父组件使用
@@ -334,12 +410,51 @@ watch(() => props.bgmUrl, (newValue) => {
   width: 100%;
   height: 100%;
   opacity: 0;
-  transition: opacity 1s ease-in-out;
+  z-index: 1;
 }
 
+/* 确保活动状态的幻灯片显示，不管有没有转场效果 */
 .slide.active {
   opacity: 1;
   z-index: 10;
+}
+
+/* 淡入淡出转场效果 (默认) */
+.slide.transition-fade {
+  transition: opacity 1s ease-in-out;
+}
+
+/* 滑动转场效果 */
+.slide.transition-slide {
+  opacity: 1;
+  transform: translateX(100%);
+  transition: transform 0.8s ease-in-out;
+}
+
+.slide.transition-slide.active {
+  transform: translateX(0);
+}
+
+/* 缩放转场效果 */
+.slide.transition-zoom {
+  opacity: 1;
+  transform: scale(1.5);
+  transition: transform 0.8s ease-out, opacity 0.8s ease-out;
+}
+
+.slide.transition-zoom.active {
+  transform: scale(1);
+}
+
+/* 旋转转场效果 */
+.slide.transition-rotate {
+  opacity: 1;
+  transform: rotate(-90deg) scale(0.8);
+  transition: transform 0.8s ease-in-out, opacity 0.8s ease-in-out;
+}
+
+.slide.transition-rotate.active {
+  transform: rotate(0) scale(1);
 }
 
 .slide img {
@@ -348,6 +463,7 @@ watch(() => props.bgmUrl, (newValue) => {
   object-fit: contain;
 }
 
+/* 控制器 */
 .slider-controls {
   position: absolute;
   bottom: 0;
@@ -399,10 +515,6 @@ watch(() => props.bgmUrl, (newValue) => {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.duration-badge {
-  display: none !important;
 }
 
 .slider-buttons {
