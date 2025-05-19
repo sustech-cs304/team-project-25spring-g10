@@ -197,7 +197,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getMemoryById, updateMemory, fetchBgMusic } from '../api/mockMemory';
+import { getMemoryById, updateMemory, fetchBgMusic } from '../api/memory';
 import ImageSlider from '../components/memory/ImageSlider.vue';
 import MusicSelector from '../components/memory/MusicSelector.vue';
 

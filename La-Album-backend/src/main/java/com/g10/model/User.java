@@ -45,6 +45,10 @@ public class User {
     @JsonManagedReference
     private List<Album> albums;
     
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<Memory> memories;
+    
     // 预设创建和更新时间
     @PrePersist
     protected void onCreate() {

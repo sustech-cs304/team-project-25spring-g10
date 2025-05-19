@@ -66,14 +66,42 @@ public class OssUtil {
     
     public String generateSignedUrl(String objectName) {
         try {
+            // 安全检查
+            if (objectName == null || objectName.trim().isEmpty()) {
+                System.out.println("警告: 尝试为空对象名生成签名URL");
+                return "";
+            }
+
+            System.out.println("原始对象URL: " + objectName);
+            
             // 如果objectName已经是完整URL，提取出对象名称
-            if (objectName != null && objectName.contains("/")) {
-                // 从URL中提取对象名称
-                String[] parts = objectName.split("/");
-                objectName = parts[parts.length - 1];
+            if (objectName.startsWith("http://") || objectName.startsWith("https://")) {
+                try {
+                    // 尝试创建URL对象来正确解析
+                    java.net.URL url = new java.net.URL(objectName);
+                    String path = url.getPath();
+                    if (path.startsWith("/")) {
+                        path = path.substring(1);
+                    }
+                    // 处理可能包含OSS域名后面的路径
+                    if (path.contains("/")) {
+                        // 可能是完整路径，保留整个路径
+                        objectName = path;
+                    } else {
+                        // 简单文件名
+                        objectName = path;
+                    }
+                } catch (Exception e) {
+                    // URL解析失败，回退到简单的字符串处理
+                    String[] parts = objectName.split("/");
+                    objectName = parts[parts.length - 1];
+                }
+            } else if (objectName.contains("/")) {
+                // 可能是对象存储中的相对路径，保留整个路径
+                // 不做额外处理，保留完整的相对路径
             }
             
-            System.out.println("生成签名URL的对象名称: " + objectName);
+            System.out.println("处理后的对象名称: " + objectName);
             
             // 设置URL过期时间为1小时
             Date expiration = new Date(System.currentTimeMillis() + 3600 * 1000);
@@ -83,11 +111,16 @@ public class OssUtil {
                 objectName, 
                 expiration
             );
-            return signedUrl.toString();
+            
+            String finalUrl = signedUrl.toString();
+            System.out.println("生成的签名URL: " + finalUrl);
+            
+            return finalUrl;
         } catch (Exception e) {
             System.out.println("生成签名URL失败: " + e.getMessage());
             System.out.println("对象名称: " + objectName);
-            throw new RuntimeException("生成签名URL失败", e);
+            // 错误情况下返回原始URL，而不是抛出异常
+            return objectName;
         }
     }
     

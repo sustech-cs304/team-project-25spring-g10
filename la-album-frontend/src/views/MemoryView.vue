@@ -138,7 +138,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getMemoryById } from '../api/mockMemory';
+import { getMemoryById } from '../api/memory';
 import ImageSlider from '../components/memory/ImageSlider.vue';
 
 const route = useRoute();

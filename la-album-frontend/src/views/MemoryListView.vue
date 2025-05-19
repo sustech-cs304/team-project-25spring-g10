@@ -214,7 +214,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { fetchMemories, deleteMemory as apiDeleteMemory, generateMemory, fetchAlbums, fetchBgMusic } from '../api/mockMemory';
+import { fetchMemories, deleteMemory as apiDeleteMemory, generateMemory, fetchBgMusic } from '../api/memory';
+import { fetchAlbums } from '../api/mockMemory';
 import MusicSelector from '../components/memory/MusicSelector.vue';
 
 const router = useRouter();

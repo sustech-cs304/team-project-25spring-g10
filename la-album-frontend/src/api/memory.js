@@ -1,69 +1,81 @@
-import axios from "axios";
+import request from '@/utils/request';
+// 临时导入模拟音乐数据，后续可以替换为实际API
+import { fetchBgMusic as mockFetchBgMusic } from './mockMemory';
 
-const BASE_URL = "http://localhost:9090/api/memory"; 
+const BASE_URL = '/memory';
 
-// 根据相册ID生成回忆视频
-export const generateMemory = async (data) => {
-  try {
-    const response = await axios.post(`${BASE_URL}/generate`, data);
-    return response.data;
-  } catch (error) {
-    console.error("Error generating memory:", error);
-    throw error;
-  }
-};
-
-// 获取用户所有回忆视频
+// 获取所有记忆视频
 export const fetchMemories = async () => {
   try {
-    const response = await axios.get(`${BASE_URL}`);
-    return response.data;
+    const response = await request.get(BASE_URL);
+    return response.data || [];
   } catch (error) {
-    console.error("Error fetching memories:", error);
+    console.error('获取记忆视频列表失败:', error);
     throw error;
   }
 };
 
-// 获取单个回忆视频详情
+// 获取记忆视频详情
 export const getMemoryById = async (id) => {
   try {
-    const response = await axios.get(`${BASE_URL}/${id}`);
+    const response = await request.get(`${BASE_URL}/${id}`);
     return response.data;
   } catch (error) {
-    console.error("Error fetching memory:", error);
+    console.error(`获取记忆视频 ${id} 详情失败:`, error);
     throw error;
   }
 };
 
-// 分享回忆视频
-export const shareMemory = async (id, shareData) => {
+// 生成记忆视频
+export const generateMemory = async (data) => {
   try {
-    const response = await axios.post(`${BASE_URL}/${id}/share`, shareData);
+    const response = await request.post(`${BASE_URL}/generate`, data);
+    console.log('生成记忆视频响应:', response);
     return response.data;
   } catch (error) {
-    console.error("Error sharing memory:", error);
+    console.error('生成记忆视频失败:', error);
     throw error;
   }
 };
 
-// 删除回忆视频
-export const deleteMemory = async (id) => {
-  try {
-    const response = await axios.delete(`${BASE_URL}/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting memory:", error);
-    throw error;
-  }
-};
-
-// 更新回忆视频信息
+// 更新记忆视频
 export const updateMemory = async (id, data) => {
   try {
-    const response = await axios.put(`${BASE_URL}/${id}`, data);
+    const response = await request.put(`${BASE_URL}/${id}`, data);
     return response.data;
   } catch (error) {
-    console.error("Error updating memory:", error);
+    console.error(`更新记忆视频 ${id} 失败:`, error);
     throw error;
   }
+};
+
+// 删除记忆视频
+export const deleteMemory = async (id) => {
+  try {
+    const response = await request.delete(`${BASE_URL}/${id}`);
+    return response;
+  } catch (error) {
+    console.error(`删除记忆视频 ${id} 失败:`, error);
+    throw error;
+  }
+};
+
+// 分享记忆视频
+export const shareMemory = async (id) => {
+  try {
+    // 目前分享功能不需要实际API调用，只是生成一个前端URL
+    // 如果后续需要实现真正的分享功能，可以添加相应的API调用
+    const shareLink = `${window.location.origin}/memory/share/${id}`;
+    return { shareLink };
+  } catch (error) {
+    console.error(`分享记忆视频 ${id} 失败:`, error);
+    throw error;
+  }
+};
+
+// 获取背景音乐列表
+export const fetchBgMusic = async () => {
+  // 暂时使用mockMemory中的音乐数据
+  // 未来可以替换为实际的API调用
+  return mockFetchBgMusic();
 }; 
