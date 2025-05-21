@@ -284,11 +284,15 @@ export default {
   methods: {
     initFabricCanvas() {
       const canvasEl = this.$refs.canvas;
+      canvasEl.width = canvasEl.clientWidth;
+      canvasEl.height = canvasEl.clientHeight;
       this.canvas = new fabric.Canvas(canvasEl, {
         preserveObjectStacking: true,
         backgroundColor: null,
         selection: true
       });
+      this.canvas.setWidth(canvasEl.clientWidth);
+      this.canvas.setHeight(canvasEl.clientHeight);
     },
     async getProxiedImage(originalUrl) {
       console.log('oiginalUrl!!!', originalUrl)
@@ -319,6 +323,7 @@ export default {
         const scaleY = canvasHeight / img.height;
 
         const scale = Math.min(scaleX, scaleY);
+        this.baseScale = scale;
         img.set({
           left: 0,
           top: 0,
@@ -478,29 +483,100 @@ export default {
       this.canvas.renderAll();
     },
     startCrop() {
-      // 清除已有裁剪框
-      const existing = this.canvas.getObjects('rect').find(obj => obj.name === 'cropRect');
-      if (existing) this.canvas.remove(existing);
+      const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
+      if (!baseImage) return;
 
-      // 添加一个新的裁剪框（可以拖动和缩放）
+      // 清除旧框和遮罩
+      this.canvas.getObjects().forEach(obj => {
+        if (['cropRect', 'cropMask'].includes(obj.name)) this.canvas.remove(obj);
+      });
+
+      // 获取缩放后的图像边界（图像已经被 scaleX/scaleY 缩放）
+      const imgWidth = baseImage.width * baseImage.scaleX;
+      const imgHeight = baseImage.height * baseImage.scaleY;
+      const imgLeft = baseImage.left;
+      const imgTop = baseImage.top;
+
+      // 设置裁剪框为图像大小的 60%
+      const cropWidth = imgWidth * 0.6;
+      const cropHeight = imgHeight * 0.6;
+      const cropLeft = imgLeft + (imgWidth - cropWidth) / 2;
+      const cropTop = imgTop + (imgHeight - cropHeight) / 2;
+
+      // 创建裁剪框
       const cropRect = new fabric.Rect({
-        left: 50,
-        top: 50,
-        width: 200,
-        height: 200,
-        fill: 'rgba(0,0,0,0.1)',
+        left: cropLeft,
+        top: cropTop,
+        width: cropWidth,
+        height: cropHeight,
+        fill: 'transparent',
         stroke: 'red',
         strokeWidth: 1,
         name: 'cropRect',
         selectable: true,
         hasBorders: true,
         hasControls: true,
+        lockRotation: true
       });
+
       this.canvas.add(cropRect);
       this.canvas.setActiveObject(cropRect);
+
+      // 添加遮罩并绑定裁剪框监听
+      this.createFullScreenMask(cropRect);
     },
-    onCropChange({ coordinates, canvas }) {
-      this.cropData = { coordinates, canvas };
+    createFullScreenMask(cropRect) {
+      const canvasWidth = this.canvas.getWidth();
+      const canvasHeight = this.canvas.getHeight();
+
+      const mask = new fabric.Rect({
+        left: 0,
+        top: 0,
+        width: canvasWidth,
+        height: canvasHeight,
+        fill: 'rgba(0, 0, 0, 0.5)',
+        selectable: false,
+        evented: false,
+        name: 'cropMask',
+      });
+
+      const hole = new fabric.Rect({
+        left: cropRect.left,
+        top: cropRect.top,
+        width: cropRect.width,
+        height: cropRect.height,
+        fill: 'white',
+        selectable: false,
+        evented: false,
+        globalCompositeOperation: 'destination-out',
+      });
+
+      const group = new fabric.Group([mask, hole], {
+        selectable: false,
+        evented: false,
+        name: 'cropMask',
+      });
+
+      this.canvas.add(group);
+      this.canvas.sendToBack(group);
+
+      // 监听裁剪框变化，实时更新遮罩
+      cropRect.on('moving', () => this.updateCropMask(cropRect));
+      cropRect.on('scaling', () => this.updateCropMask(cropRect));
+    },
+    updateCropMask(cropRect) {
+      const group = this.canvas.getObjects().find(obj => obj.name === 'cropMask');
+      if (!group || !(group instanceof fabric.Group)) return;
+
+      const hole = group._objects[1]; // 第 2 个元素是挖空区域
+      hole.set({
+        left: cropRect.left,
+        top: cropRect.top,
+        width: cropRect.width * cropRect.scaleX,
+        height: cropRect.height * cropRect.scaleY
+      });
+      group.dirty = true;
+      this.canvas.requestRenderAll();
     },
 
     async applyCrop() {
@@ -529,7 +605,9 @@ export default {
       this.canvas.setWidth(clipPath.width);
       this.canvas.setHeight(clipPath.height);
       this.canvas.centerObject(baseImage);
-
+      this.canvas.getObjects().forEach(obj => {
+        if (obj.name === 'cropMask') this.canvas.remove(obj);
+      });
       this.canvas.remove(cropRect);
       this.canvas.renderAll();
     },
@@ -544,6 +622,9 @@ export default {
         this.canvas.remove(cropRect);
         this.canvas.renderAll();
       }
+      this.canvas.getObjects().forEach(obj => {
+        if (obj.name === 'cropMask') this.canvas.remove(obj);
+      });
     },
     /////////////////////////////
     updateBrushColor() {
@@ -588,138 +669,77 @@ export default {
     },
     /////////////////////////////
     async save() {
-      try {
-        this.isSaving = true;
-        
-        let imageBlob;
-        if (this.cropData) {
-          // 使用裁剪后的图像
-          const { canvas } = this.cropData;
-          imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-        } else {
-          // 使用当前预览图像
-          // 创建一个新的图像元素从当前显示的图像
-          const img = new Image();
-          img.crossOrigin = "anonymous"; // 解决跨域问题
-          
-          // 获取代理图像URL以避免CORS问题
-          const proxiedUrl = await this.getProxiedImage(this.imageUrl);
-          
-          // 使用promise等待图像加载
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = proxiedUrl;
-          });
-          
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          // 设置画布大小
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          
-          // 应用变换
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate((this.adjustments.rotation * Math.PI) / 180);
-          ctx.scale(
-            this.adjustments.flipH ? -1 : 1,
-            this.adjustments.flipV ? -1 : 1
-          );
-          ctx.translate(-canvas.width / 2, -canvas.height / 2);
-          
-          // 绘制图片
-          ctx.drawImage(img, 0, 0);
-          
-          // 应用滤镜
-          if (this.currentFilter) {
-            const filter = this.filters.find(f => f.name === this.currentFilter);
-            ctx.filter = filter.style;
-            ctx.drawImage(canvas, 0, 0);
-          }
-          
-          // 转换为blob，不经过像素级操作，避免CORS问题
-          imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-          
-          // 如果需要应用像素级调整（如果不会触发CORS错误）
-          if (this.adjustments.brightness !== 0 || 
-              this.adjustments.contrast !== 0 || 
-              this.adjustments.saturation !== 100) {
-            try {
-              // 在新canvas上应用像素级调整
-              const adjustCanvas = document.createElement('canvas');
-              const adjustCtx = adjustCanvas.getContext('2d');
-              adjustCanvas.width = canvas.width;
-              adjustCanvas.height = canvas.height;
-              
-              // 将之前的图像绘制到新画布
-              adjustCtx.drawImage(canvas, 0, 0);
-              
-              // 尝试获取像素数据进行处理
-              const imageData = adjustCtx.getImageData(0, 0, adjustCanvas.width, adjustCanvas.height);
-              const data = imageData.data;
-              
-              for (let i = 0; i < data.length; i += 4) {
-                // 亮度
-                if (this.adjustments.brightness !== 0) {
-                  const factor = 1 + this.adjustments.brightness / 100;
-                  data[i] *= factor;     // R
-                  data[i + 1] *= factor; // G
-                  data[i + 2] *= factor; // B
-                }
-                
-                // 对比度
-                if (this.adjustments.contrast !== 0) {
-                  const factor = (259 * (this.adjustments.contrast + 100)) / (255 * (259 - this.adjustments.contrast));
-                  data[i] = factor * (data[i] - 128) + 128;
-                  data[i + 1] = factor * (data[i + 1] - 128) + 128;
-                  data[i + 2] = factor * (data[i + 2] - 128) + 128;
-                }
-                
-                // 饱和度
-                if (this.adjustments.saturation !== 100) {
-                  const gray = 0.2989 * data[i] + 0.5870 * data[i + 1] + 0.1140 * data[i + 2];
-                  const factor = this.adjustments.saturation / 100;
-                  data[i] = gray + factor * (data[i] - gray);
-                  data[i + 1] = gray + factor * (data[i + 1] - gray);
-                  data[i + 2] = gray + factor * (data[i + 2] - gray);
-                }
-              }
-  
-              adjustCtx.putImageData(imageData, 0, 0);
-              imageBlob = await new Promise(resolve => adjustCanvas.toBlob(resolve, 'image/jpeg', 0.9));
-            } catch (error) {
-              console.warn('无法直接应用像素级调整，使用原始图像:', error);
-              // 忽略错误，使用已有的imageBlob继续
-            }
-          }
-        }
-        
-        // 创建object URL
-        const imageUrl = URL.createObjectURL(imageBlob);
-        
-        // 为保存的文件生成一个新的唯一文件名
-        // 注意：需要处理URL可能包含查询参数的情况
-        const fullUrl = this.imageUrl.split('?')[0]; // 去除URL中的查询参数
-        const urlParts = fullUrl.split('/');
-        const originalFilename = urlParts[urlParts.length - 1];
-        const filenameParts = originalFilename.split('.');
-        const extension = filenameParts.length > 1 ? filenameParts.pop() : 'jpg';
-        const baseName = filenameParts.join('.');
-        const newFilename = `${baseName}_edited_${Date.now()}.${extension}`;
-        
-        // 创建一个文件对象，附加新文件名
-        const imageFile = new File([imageBlob], newFilename, { type: 'image/jpeg' });
-        
-        // 发送编辑后的图片和新文件名
-        this.$emit('save-complete', { url: imageUrl, file: imageFile, filename: newFilename });
-      } catch (error) {
-        console.error('保存失败:', error);
-        this.$emit('error', error);
-      } finally {
-        this.isSaving = false;
-      }
-    }
+  try {
+    this.isSaving = true;
+
+    // 1️⃣ 获取当前 fabric canvas 的图像合成输出
+    const mergedDataUrl = this.canvas.toDataURL({
+      format: 'jpeg',
+      quality: 0.9,
+      multiplier: 1,
+      enableRetinaScaling: false
+    });
+
+    // 2️⃣ 将 DataURL 转为 Blob
+    const imageBlob = await new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(resolve, 'image/jpeg', 0.9);
+      };
+      img.onerror = () => {
+        throw new Error('合成图像加载失败');
+      };
+      img.src = mergedDataUrl;
+    });
+
+    // 3️⃣ 创建新文件名
+    const fullUrl = this.imageUrl.split('?')[0];
+    const urlParts = fullUrl.split('/');
+    const originalFilename = urlParts[urlParts.length - 1];
+    const filenameParts = originalFilename.split('.');
+    const extension = filenameParts.length > 1 ? filenameParts.pop() : 'jpg';
+    const baseName = filenameParts.join('.');
+    const newFilename = `${baseName}_edited_${Date.now()}.${extension}`;
+
+    const imageFile = new File([imageBlob], newFilename, { type: 'image/jpeg' });
+
+    // 4️⃣ 上传接口（保存到数据库或 OSS）
+    const formData = new FormData();
+    formData.append('file', imageFile);
+    formData.append('filename', newFilename);
+    formData.append('originUrl', this.imageUrl);
+
+    const token = localStorage.getItem('token');
+
+    await fetch('/api/photos/update', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData
+    });
+
+    // 5️⃣ 本地 URL 回传给父组件
+    const localPreviewUrl = URL.createObjectURL(imageBlob);
+    this.$emit('save-complete', {
+      url: localPreviewUrl,
+      file: imageFile,
+      filename: newFilename
+    });
+
+  } catch (error) {
+    console.error('保存失败:', error);
+    this.$emit('error', error);
+  } finally {
+    this.isSaving = false;
+  }
+}
+
   }
 }
 </script>
@@ -729,6 +749,11 @@ export default {
   display: flex;
   gap: 20px;
   height: 100%;
+}
+.editor-canvas {
+  width: 500px;
+  height: 100%;
+  border: 1px solid #ccc;
 }
 .scroll-container {
   display: flex;

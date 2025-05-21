@@ -14,6 +14,7 @@ import RegisterView from '../views/RegisterView.vue';
 import MemoryListView from '../views/MemoryListView.vue';
 import MemoryView from '../views/MemoryView.vue';
 import EditMemoryView from '../views/EditMemoryView.vue';
+import StyleTransferPage from '../views/StyleTransferPage.vue';
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
@@ -30,6 +31,7 @@ const routes = [
   { path: '/edit-memory/:id', name: 'EditMemory', component: EditMemoryView, props: true },
   { path: '/login', name: 'Login', component: LoginView },
   { path: '/register', name: 'Register', component: RegisterView },
+  { path: '/style-transfer/:id', name: 'StyleTransferPage', component: StyleTransferPage}
 ];
 
 const router = createRouter({

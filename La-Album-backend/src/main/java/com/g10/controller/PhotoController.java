@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.HttpStatus;
 import java.util.List;
 import java.util.Optional;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/photos")
@@ -227,5 +228,40 @@ public class PhotoController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    // @PostMapping("/upload-new-version")
+    // public ResponseEntity<?> uploadNewVersion(
+    //         @RequestParam("file") MultipartFile file,
+    //         @RequestParam("filename") String filename,
+    //         @RequestParam("originUrl") String originUrl,
+    //         HttpServletRequest request) {
+    //     try {
+    //         // 1. 获取当前用户（例如从 token 提取）
+    //         String userId = authService.extractUserId(request);
+
+    //         // 2. 构造新路径
+    //         String basePath = extractBasePathFromUrl(originUrl); // 提取 OSS 路径
+    //         String timestamp = String.valueOf(System.currentTimeMillis());
+
+    //         String fileExtension = filename.substring(filename.lastIndexOf("."));
+    //         String newFilename = filename.substring(0, filename.lastIndexOf(".")) + "_v" + timestamp + fileExtension;
+    //         String versionedKey = basePath + "/versions/" + newFilename;
+
+    //         // 3. 上传新版本文件
+    //         String uploadedUrl = ossUtil.uploadFile(versionedKey, file.getInputStream());
+
+    //         // 4. 写入数据库记录（你需要在 PhotoService 实现这个方法）
+    //         photoService.saveNewVersion(userId, originUrl, uploadedUrl, filename);
+
+    //         // 5. 返回成功响应
+    //         Map<String, String> response = new HashMap<>();
+    //         response.put("url", uploadedUrl);
+    //         response.put("versionKey", versionedKey);
+
+    //         return ResponseEntity.ok(response);
+    //     } catch (Exception e) {
+    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("上传失败：" + e.getMessage());
+    //     }
+    // }
 
 }

@@ -109,35 +109,10 @@
             </div>
           </div>
         </div>
-
-        <div v-if="photo.exif" class="exif-info">
-          <h3>EXIF 信息</h3>
-          <div class="exif-grid">
-            <div v-if="photo.exif.camera" class="exif-item">
-              <span class="label">相机</span>
-              <span class="value">{{ photo.exif.camera }}</span>
-            </div>
-            <div v-if="photo.exif.lens" class="exif-item">
-              <span class="label">镜头</span>
-              <span class="value">{{ photo.exif.lens }}</span>
-            </div>
-            <div v-if="photo.exif.focalLength" class="exif-item">
-              <span class="label">焦距</span>
-              <span class="value">{{ photo.exif.focalLength }}mm</span>
-            </div>
-            <div v-if="photo.exif.aperture" class="exif-item">
-              <span class="label">光圈</span>
-              <span class="value">f/{{ photo.exif.aperture }}</span>
-            </div>
-            <div v-if="photo.exif.shutterSpeed" class="exif-item">
-              <span class="label">快门</span>
-              <span class="value">{{ photo.exif.shutterSpeed }}s</span>
-            </div>
-            <div v-if="photo.exif.iso" class="exif-item">
-              <span class="label">ISO</span>
-              <span class="value">{{ photo.exif.iso }}</span>
-            </div>
-          </div>
+        <div class="advanced-actions">
+          <button class="style-transfer-button" @click="openStyleTransfer">
+            ✨ 风格迁移
+          </button>
         </div>
       </div>
     </div>
@@ -378,8 +353,14 @@ export default {
     },
     retry() {
       this.loadData();
+    },
+    openStyleTransfer() {
+    console.log('[点击风格迁移]', this.photo.id);
+    this.$router.push(`/style-transfer/${this.photo.id}`)
+    console.log('[点击风格迁移]', this.photo.id);
     }
-  }
+  },
+  
 }
 </script>
 
@@ -645,5 +626,35 @@ export default {
     grid-template-columns: 1fr;
   }
 }
+
+.advanced-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.style-transfer-button {
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #7e57c2, #ab47bc);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(171, 71, 188, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.style-transfer-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(171, 71, 188, 0.5);
+}
+
+.style-transfer-button:active {
+  transform: scale(0.98);
+}
+
+
 </style>
   
