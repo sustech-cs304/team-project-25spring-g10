@@ -54,7 +54,8 @@ public class PhotoService {
                         photo.getUploadTime(),
                         photo.getAlbum() != null ? photo.getAlbum().getId() : null,
                         photo.getDate(),
-                        photo.getDescription()
+                        photo.getDescription(),
+                        photo.getAlbum() != null ? photo.getAlbum().getTitle(): "Unknown Album"
                 ));
     }
 

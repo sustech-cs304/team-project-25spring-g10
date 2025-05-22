@@ -84,7 +84,10 @@
 
           <div class="photo-info">
             <h1 class="photo-title">{{ photo.title }}</h1>
-            <p class="photo-description">{{ photo.description }}</p>
+            <p class="photo-description">
+              {{ !photo.description ? 'no description' : photo.description }}
+            </p>
+
 
             <div class="photo-metadata">
               <div class="metadata-item">
@@ -100,7 +103,7 @@
               <div class="metadata-item">
                 <span class="label">相册</span>
                 <router-link :to="`/album/${photo.albumId}`" class="value link">
-                  {{ album?.title || '未知相册' }}
+                  {{ photo.albumTitle || '未知相册' }}
                 </router-link>
               </div>
             </div>

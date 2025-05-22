@@ -34,8 +34,6 @@ public class PhotoController {
 
     @Autowired
     private AlbumService albumService;
-    @Autowired
-    private UserService userService;
 
     @GetMapping
     public ResponseEntity<List<PhotoDTO>> getAllPhotos() {
@@ -50,7 +48,8 @@ public class PhotoController {
                     photo.getUploadTime(),
                     photo.getAlbum() != null ? photo.getAlbum().getId() : null,
                     photo.getDate(),
-                    photo.getDescription()
+                    photo.getDescription(),
+                    photo.getAlbum() != null ? photo.getAlbum().getTitle(): "Unknown Album"
             );
         }).toList();
 
@@ -154,7 +153,6 @@ public class PhotoController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long albumId) {
-
         List<Photo> results = photoService.searchPhotos(q, startDate, endDate, albumId);
         List<PhotoDTO> dtos = results.stream().map(photo -> {
             String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
@@ -167,7 +165,8 @@ public class PhotoController {
                     photo.getUploadTime(),
                     photo.getAlbum() != null ? photo.getAlbum().getId() : null,
                     photo.getDate(),
-                    photo.getDescription()
+                    photo.getDescription(),
+                    photo.getAlbum() != null ? photo.getAlbum().getTitle(): "Unknown Album"
             );
         }).toList();
 

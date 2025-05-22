@@ -1,11 +1,13 @@
 package com.g10.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.CascadeType;
 
@@ -15,6 +17,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 @Entity
 @Table(name = "photos")
 @Data // 使用 Lombok 生成 getter、setter、toString
+@NoArgsConstructor
+@AllArgsConstructor
 public class Photo {
 
     @Id
