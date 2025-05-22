@@ -1,19 +1,7 @@
 <template>
   <div class="image-editor">
-    <div class="preview-container">
-      <div 
-        class="preview"
-        :style="previewStyle"
-        ref="preview"
-      >
-        <img 
-          :src="imageUrl" 
-          :alt="alt"
-          @load="handleImageLoad"
-          ref="image"
-        >
-      </div>
-      <div class="overlay" v-if="isCropping">
+    <canvas ref="canvas" class="editor-canvas"></canvas>
+    <div class="overlay" v-if="isCropping">
         <div class="crop-overlay">
           <Cropper
             ref="cropper"
@@ -25,50 +13,38 @@
           />
         </div>
         <div class="crop-controls">
-          <button @click="cancelCrop">取消</button>
           <button @click="applyCrop" :disabled="isSaving">应用</button>
         </div>
       </div>
-    </div>
+
 
     <div class="editor-controls">
       <div class="control-group">
         <h3>基本调整</h3>
-        <div class="control">
-          <label>亮度</label>
-          <input 
-            type="range" 
-            v-model="adjustments.brightness"
-            min="-100"
-            max="100"
-            step="1"
-            @input="updatePreview"
-          >
-          <span class="value">{{ adjustments.brightness }}</span>
+        <div class="adjustment-strip">
+          <div class="scroll-container">
+            <button
+              v-for="item in adjustmentDefs"
+              :key="item.key"
+              :class="{ active: activeAdjustment === item.key }"
+              @click="activeAdjustment = item.key"
+            >
+              {{ item.label }}
+            </button>
+          </div>
         </div>
-        <div class="control">
-          <label>对比度</label>
-          <input 
-            type="range" 
-            v-model="adjustments.contrast"
-            min="-100"
-            max="100"
-            step="1"
+
+        <div v-if="activeAdjustment" class="adjustment-slider">
+          <input
+            type="range"
+            :min="getActiveDef().min"
+            :max="getActiveDef().max"
+            :step="getActiveDef().step"
+            v-model.number="adjustments[activeAdjustment]"
             @input="updatePreview"
-          >
-          <span class="value">{{ adjustments.contrast }}</span>
-        </div>
-        <div class="control">
-          <label>饱和度</label>
-          <input 
-            type="range" 
-            v-model="adjustments.saturation"
-            min="0"
-            max="200"
-            step="1"
-            @input="updatePreview"
-          >
-          <span class="value">{{ adjustments.saturation }}%</span>
+          /><span class="value">
+            {{ typeof adjustments[activeAdjustment] === 'number' ? adjustments[activeAdjustment].toFixed(2) : '—' }}
+          </span>
         </div>
       </div>
 
@@ -85,12 +61,12 @@
             </svg>
           </button>
           <button 
-            @click="rotate(90)"
-            title="向右旋转"
+            @click="startCrop"
+            title="裁剪"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-              <path d="M21 3v5h-5"/>
+              <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
+              <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
             </svg>
           </button>
           <button 
@@ -118,7 +94,7 @@
 
       <div class="control-group">
         <h3>滤镜</h3>
-        <div class="filters">
+        <div class="filters scroll-container">
           <button 
             v-for="filter in filters"
             :key="filter.name"
@@ -129,12 +105,46 @@
             <div 
               class="filter-preview"
               :style="{ filter: filter.style }"
-            ></div>
+            >
+            <img
+              :src="imageUrl"
+              alt="Filter Preview"
+              class="filter-preview-image"
+              :style="{ filter: filter.value }"
+            />
+          </div>
             <span>{{ filter.label }}</span>
           </button>
         </div>
       </div>
 
+      <div class="control-group">
+        <h3>贴纸</h3>
+        <div class="stickers scroll-container">
+          <button v-for="sticker in stickers" :key="sticker.label" @click="addSticker(sticker.src)">
+            <img :src="sticker.src" :alt="sticker.label" class="sticker-thumb" />
+          </button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>绘图</h3>
+        <div class="drawing-tools">
+          <label class="drawing-label">
+            颜色:
+            <input type="color" v-model="drawing.color" @input="updateBrushColor" />
+          </label>
+          <label class="drawing-label">
+            线宽:
+            <input type="range" min="1" max="50" v-model="drawing.width" @input="updateBrushWidth" />
+          </label>
+          <div class="drawing-buttons">
+            <button @click="enableDrawingMode">启用绘图</button>
+            <button @click="disableDrawingMode">停止绘图</button>
+          </div>
+        </div>
+      </div>
+      
       <div class="actions">
         <button 
           class="reset-button"
@@ -142,12 +152,6 @@
           :disabled="!hasChanges"
         >
           重置
-        </button>
-        <button 
-          class="crop-button"
-          @click="startCrop"
-        >
-          裁剪
         </button>
         <button 
           class="save-button"
@@ -165,6 +169,10 @@
 <script>
 import { Cropper } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'
+// import { Canvas, FabricImage } from 'fabric';
+import { fabric } from 'fabric';
+
+
 
 export default {
   name: 'ImageEditor',
@@ -194,12 +202,24 @@ export default {
   },
   data() {
     return {
-      adjustments: { ...this.initialAdjustments },
+      drawing: {
+        color: '#000000',
+        width: 5,
+      },
       currentFilter: null,
       isCropping: false,
       isSaving: false,
       originalImage: null,
       cropData: null,
+      adjustmentDefs: [
+        { key: 'contrast', label: '对比度', min: -1, max: 1, step: 0.01, default: 0 },
+        { key: 'brightness', label: '亮度', min: -1, max: 1, step: 0.01, default: 0 },
+        { key: 'saturation', label: '饱和度', min: 0, max: 2, step: 0.01, default: 1 },
+        { key: 'sharpen', label: '锐度', min: 0, max: 1, step: 0.01, default: 0 },
+        { key: 'denoise', label: '去噪', min: 0, max: 1, step: 0.01, default: 0 }
+      ],
+      adjustments: {},
+      activeAdjustment: 'brightness',
       filters: [
         { name: 'normal', label: '原图', style: 'none' },
         { name: 'grayscale', label: '黑白', style: 'grayscale(100%)' },
@@ -209,8 +229,17 @@ export default {
         { name: 'cool', label: '冷色', style: 'saturate(80%) hue-rotate(180deg)' },
         { name: 'dramatic', label: '戏剧', style: 'contrast(130%) saturate(120%)' },
         { name: 'fade', label: '褪色', style: 'contrast(90%) saturate(80%)' }
+      ],
+      stickers: [
+        { label: '星星', src: '/stickers/star.png' },
+        { label: '爱心', src: '/stickers/love.png' },
+        { label: '情侣', src: '/stickers/in-love.png' },
+        { label: '旅行', src: '/stickers/travel.png' },
       ]
     }
+  },
+  created() {
+    this.adjustments = Object.fromEntries(this.adjustmentDefs.map(a => [a.key, a.default]));
   },
   computed: {
     previewStyle() {
@@ -246,146 +275,471 @@ export default {
       );
     }
   },
+  mounted() {
+    this.initFabricCanvas(); 
+    this.loadBaseImage();
+
+  },
+
   methods: {
+    initFabricCanvas() {
+      const canvasEl = this.$refs.canvas;
+      canvasEl.width = canvasEl.clientWidth;
+      canvasEl.height = canvasEl.clientHeight;
+      this.canvas = new fabric.Canvas(canvasEl, {
+        preserveObjectStacking: true,
+        backgroundColor: null,
+        selection: true
+      });
+      this.canvas.setWidth(canvasEl.clientWidth);
+      this.canvas.setHeight(canvasEl.clientHeight);
+    },
+    async getProxiedImage(originalUrl) {
+      console.log('oiginalUrl!!!', originalUrl)
+      const token = localStorage.getItem('token');
+      const key = decodeURIComponent(originalUrl.split('?')[0].split('.com/')[1]); // 取出 OSS key
+      const encodedKey = encodeURIComponent(key);
+      
+      try {
+        const res = await fetch(`/api/photos/proxy?key=${encodedKey}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!res.ok) throw new Error('获取签名链接失败');
+        const signedUrl = await res.text();
+        return signedUrl;
+      } catch (e) {
+        console.error('获取图片直链失败', e);
+        return originalUrl; // fallback
+      }
+    },
+    async loadBaseImage() {
+      const canvasWidth = this.canvas.getWidth();
+      const canvasHeight = this.canvas.getHeight();
+
+      fabric.Image.fromURL(this.imageUrl, (img) => {
+        const scaleX = canvasWidth / img.width;
+        const scaleY = canvasHeight / img.height;
+
+        const scale = Math.min(scaleX, scaleY);
+        this.baseScale = scale;
+        img.set({
+          left: 0,
+          top: 0,
+          scaleX: scale,
+          scaleY: scale,
+          selectable: false,
+          evented: false,
+          name: 'baseImage'
+        });
+
+        this.canvas.clear(); // 清除所有对象
+        this.canvas.add(img); // 添加主图像到对象层
+        this.canvas.sendToBack(img); // 放到底层，其他贴纸/绘图在上面
+        this.canvas.renderAll();
+        console.log('✅ 主图已加载');
+        });
+    },
+    getActiveDef() {
+      return this.adjustmentDefs.find(d => d.key === this.activeAdjustment) || {};
+    },
+    getBaseAdjustments() {
+      const adj = this.adjustments;
+      const filters = [];
+
+      if (adj.brightness !== 0) {
+        filters.push(new fabric.Image.filters.Brightness({ brightness: adj.brightness }));
+      }
+      if (adj.contrast !== 0) {
+        filters.push(new fabric.Image.filters.Contrast({ contrast: adj.contrast }));
+      }
+      if (adj.saturation !== 1) {
+        filters.push(new fabric.Image.filters.Saturation({ saturation: adj.saturation - 1 }));
+      }
+      if (adj.sharpen > 0) {
+        filters.push(new fabric.Image.filters.Convolute({ matrix: [
+          0, -adj.sharpen, 0,
+          -adj.sharpen, 4 * adj.sharpen + 1, -adj.sharpen,
+          0, -adj.sharpen, 0
+        ] }));
+      }
+      if (adj.denoise > 0) {
+        filters.push(new fabric.Image.filters.Blur({ blur: adj.denoise }));
+      }
+      return filters;
+    },
+    onAdjustmentChange(e) {
+      const val = parseFloat(e.target.value);
+      this.$set(this.adjustments, this.activeAdjustment, val);
+      this.applyAllFilters();
+    },
+    addSticker(stickerUrl) {
+      fabric.Image.fromURL(stickerUrl, img => {
+        img.set({
+          left: 100,
+          top: 100,
+          scaleX: 0.5,
+          scaleY: 0.5,
+          selectable: true
+        });
+        this.canvas.add(img);
+        this.canvas.setActiveObject(img);
+      }, { crossOrigin: 'anonymous' });
+    },
+   
+
+    // 扩展保存逻辑：将Fabric图层合并
+    async mergeCanvasWithFabric(baseCanvas) {
+      if (!this.canvas) return baseCanvas;
+
+      const overlay = document.createElement('canvas');
+      overlay.width = baseCanvas.width;
+      overlay.height = baseCanvas.height;
+
+      const overlayCtx = overlay.getContext('2d');
+
+      // 渲染 fabric 到 overlay
+      const dataUrl = this.canvas.toDataURL({ format: 'png' });
+      const overlayImage = new Image();
+      overlayImage.src = dataUrl;
+      await new Promise(resolve => (overlayImage.onload = resolve));
+
+      overlayCtx.drawImage(overlayImage, 0, 0, baseCanvas.width, baseCanvas.height);
+      return overlay;
+    },
+
     handleImageLoad(event) {
       this.originalImage = event.target;
       this.$emit('preview-updated', this.imageUrl);
     },
-    updatePreview() {
-      this.$emit('preview-updated', this.imageUrl);
-    },
-    rotate(degrees) {
-      this.adjustments.rotation = (this.adjustments.rotation + degrees) % 360;
-      this.updatePreview();
-    },
-    flip(direction) {
-      if (direction === 'horizontal') {
-        this.adjustments.flipH = !this.adjustments.flipH;
-      } else {
-        this.adjustments.flipV = !this.adjustments.flipV;
+    /////////////////////////////////////////
+    applyAllFilters() {
+      const baseImage = this.canvas?.getObjects('image').find(obj => obj.name === 'baseImage');
+      if (!baseImage) return;
+
+      const filters = [];
+
+      switch (this.currentFilter) {
+        case 'grayscale':
+          filters.push(new fabric.Image.filters.Grayscale());
+          break;
+        case 'sepia':
+        case 'vintage':
+          filters.push(new fabric.Image.filters.Sepia());
+          break;
+        case 'warm':
+          filters.push(new fabric.Image.filters.Sepia());
+          filters.push(new fabric.Image.filters.Saturation({ saturation: 0.4 }));
+          break;
+        case 'cool':
+          filters.push(new fabric.Image.filters.HueRotation({ rotation: Math.PI }));
+          break;
+        case 'dramatic':
+          filters.push(new fabric.Image.filters.Contrast({ contrast: 0.3 }));
+          filters.push(new fabric.Image.filters.Saturation({ saturation: 0.2 }));
+          break;
+        case 'fade':
+          filters.push(new fabric.Image.filters.Contrast({ contrast: -0.1 }));
+          filters.push(new fabric.Image.filters.Saturation({ saturation: -0.2 }));
+          break;
+        default:
+          break;
       }
-      this.updatePreview();
+
+      filters.push(...this.getBaseAdjustments());
+
+      baseImage.filters = filters;
+      baseImage.applyFilters();
+      this.canvas.renderAll();
+    },
+
+    updatePreview() {
+      this.applyAllFilters();
     },
     applyFilter(filterName) {
       this.currentFilter = this.currentFilter === filterName ? null : filterName;
-      this.updatePreview();
+      this.applyAllFilters();
     },
-    reset() {
-      this.adjustments = { ...this.initialAdjustments };
-      this.currentFilter = null;
-      this.cropData = null;
-      this.updatePreview();
+    /////////////////////////////
+    rotate(degrees) {
+      const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
+      if (!baseImage) return;
+
+      const newAngle = ((baseImage.angle || 0) + degrees) % 360;
+      baseImage.rotate(newAngle);
+      this.canvas.renderAll();
+    },
+    flip(direction) {
+      const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
+      if (!baseImage) return;
+
+      if (direction === 'horizontal') {
+        baseImage.flipX = !baseImage.flipX;
+      } else {
+        baseImage.flipY = !baseImage.flipY;
+      }
+
+      this.canvas.renderAll();
     },
     startCrop() {
-      this.isCropping = true;
+      const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
+      if (!baseImage) return;
+
+      // 清除旧框和遮罩
+      this.canvas.getObjects().forEach(obj => {
+        if (['cropRect', 'cropMask'].includes(obj.name)) this.canvas.remove(obj);
+      });
+
+      // 获取缩放后的图像边界（图像已经被 scaleX/scaleY 缩放）
+      const imgWidth = baseImage.width * baseImage.scaleX;
+      const imgHeight = baseImage.height * baseImage.scaleY;
+      const imgLeft = baseImage.left;
+      const imgTop = baseImage.top;
+
+      // 设置裁剪框为图像大小的 60%
+      const cropWidth = imgWidth * 0.6;
+      const cropHeight = imgHeight * 0.6;
+      const cropLeft = imgLeft + (imgWidth - cropWidth) / 2;
+      const cropTop = imgTop + (imgHeight - cropHeight) / 2;
+
+      // 创建裁剪框
+      const cropRect = new fabric.Rect({
+        left: cropLeft,
+        top: cropTop,
+        width: cropWidth,
+        height: cropHeight,
+        fill: 'transparent',
+        stroke: 'red',
+        strokeWidth: 1,
+        name: 'cropRect',
+        selectable: true,
+        hasBorders: true,
+        hasControls: true,
+        lockRotation: true
+      });
+
+      this.canvas.add(cropRect);
+      this.canvas.setActiveObject(cropRect);
+
+      // 添加遮罩并绑定裁剪框监听
+      this.createFullScreenMask(cropRect);
     },
-    onCropChange({ coordinates, canvas }) {
-      this.cropData = { coordinates, canvas };
+    createFullScreenMask(cropRect) {
+      const canvasWidth = this.canvas.getWidth();
+      const canvasHeight = this.canvas.getHeight();
+
+      const mask = new fabric.Rect({
+        left: 0,
+        top: 0,
+        width: canvasWidth,
+        height: canvasHeight,
+        fill: 'rgba(0, 0, 0, 0.5)',
+        selectable: false,
+        evented: false,
+        name: 'cropMask',
+      });
+
+      const hole = new fabric.Rect({
+        left: cropRect.left,
+        top: cropRect.top,
+        width: cropRect.width,
+        height: cropRect.height,
+        fill: 'white',
+        selectable: false,
+        evented: false,
+        globalCompositeOperation: 'destination-out',
+      });
+
+      const group = new fabric.Group([mask, hole], {
+        selectable: false,
+        evented: false,
+        name: 'cropMask',
+      });
+
+      this.canvas.add(group);
+      this.canvas.sendToBack(group);
+
+      // 监听裁剪框变化，实时更新遮罩
+      cropRect.on('moving', () => this.updateCropMask(cropRect));
+      cropRect.on('scaling', () => this.updateCropMask(cropRect));
     },
+    updateCropMask(cropRect) {
+      const group = this.canvas.getObjects().find(obj => obj.name === 'cropMask');
+      if (!group || !(group instanceof fabric.Group)) return;
+
+      const hole = group._objects[1]; // 第 2 个元素是挖空区域
+      hole.set({
+        left: cropRect.left,
+        top: cropRect.top,
+        width: cropRect.width * cropRect.scaleX,
+        height: cropRect.height * cropRect.scaleY
+      });
+      group.dirty = true;
+      this.canvas.requestRenderAll();
+    },
+
     async applyCrop() {
-      try {
-        this.isSaving = true;
-        if (!this.cropData) {
-          throw new Error('没有裁剪数据');
-        }
-        
-        const { canvas } = this.cropData;
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-        const url = URL.createObjectURL(blob);
-        
-        this.$emit('save-complete', url);
-        this.isCropping = false;
-      } catch (error) {
-        console.error('裁剪失败:', error);
-        this.$emit('error', error);
-      } finally {
-        this.isSaving = false;
-      }
+      const cropRect = this.canvas.getObjects('rect').find(obj => obj.name === 'cropRect');
+      const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
+      if (!cropRect || !baseImage) return;
+
+      // 将裁剪区域转换为 clipPath
+      const clipPath = new fabric.Rect({
+        left: 0,
+        top: 0,
+        width: cropRect.width * cropRect.scaleX,
+        height: cropRect.height * cropRect.scaleY,
+        originX: 'left',
+        originY: 'top',
+      });
+
+      const offsetLeft = cropRect.left;
+      const offsetTop = cropRect.top;
+
+      baseImage.clipPath = clipPath;
+      baseImage.left = -offsetLeft;
+      baseImage.top = -offsetTop;
+
+      // 重新设置 canvas 尺寸以适配裁剪
+      this.canvas.setWidth(clipPath.width);
+      this.canvas.setHeight(clipPath.height);
+      this.canvas.centerObject(baseImage);
+      this.canvas.getObjects().forEach(obj => {
+        if (obj.name === 'cropMask') this.canvas.remove(obj);
+      });
+      this.canvas.remove(cropRect);
+      this.canvas.renderAll();
     },
+
     cancelCrop() {
       this.isCropping = false;
       this.cropData = null;
-    },
-    async save() {
-      try {
-        this.isSaving = true;
-        
-        let imageData;
-        if (this.cropData) {
-          // 使用裁剪后的图像
-          const { canvas } = this.cropData;
-          imageData = canvas.toDataURL('image/jpeg', 0.9);
-        } else {
-          // 使用当前预览图像
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          // 设置画布大小
-          canvas.width = this.originalImage.naturalWidth;
-          canvas.height = this.originalImage.naturalHeight;
-          
-          // 应用变换
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate((this.adjustments.rotation * Math.PI) / 180);
-          ctx.scale(
-            this.adjustments.flipH ? -1 : 1,
-            this.adjustments.flipV ? -1 : 1
-          );
-          ctx.translate(-canvas.width / 2, -canvas.height / 2);
-          
-          // 绘制图片
-          ctx.drawImage(this.originalImage, 0, 0);
-          
-          // 应用滤镜
-          if (this.currentFilter) {
-            const filter = this.filters.find(f => f.name === this.currentFilter);
-            ctx.filter = filter.style;
-            ctx.drawImage(canvas, 0, 0);
-          }
-          
-          // 应用亮度、对比度和饱和度
-          let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const data = imageData.data;
-          
-          for (let i = 0; i < data.length; i += 4) {
-            // 亮度
-            if (this.adjustments.brightness !== 0) {
-              const factor = 1 + this.adjustments.brightness / 100;
-              data[i] *= factor;
-              data[i + 1] *= factor;
-              data[i + 2] *= factor;
-            }
-            
-            // 对比度
-            if (this.adjustments.contrast !== 0) {
-              const factor = (259 * (this.adjustments.contrast + 100)) / (255 * (259 - this.adjustments.contrast));
-              data[i] = factor * (data[i] - 128) + 128;
-              data[i + 1] = factor * (data[i + 1] - 128) + 128;
-              data[i + 2] = factor * (data[i + 2] - 128) + 128;
-            }
-            
-            // 饱和度
-            if (this.adjustments.saturation !== 100) {
-              const gray = 0.2989 * data[i] + 0.5870 * data[i + 1] + 0.1140 * data[i + 2];
-              const factor = this.adjustments.saturation / 100;
-              data[i] = gray + factor * (data[i] - gray);
-              data[i + 1] = gray + factor * (data[i + 1] - gray);
-              data[i + 2] = gray + factor * (data[i + 2] - gray);
-            }
-          }
-          
-          ctx.putImageData(imageData, 0, 0);
-          imageData = canvas.toDataURL('image/jpeg', 0.9);
-        }
-        
-        this.$emit('save-complete', imageData);
-      } catch (error) {
-        console.error('保存失败:', error);
-        this.$emit('error', error);
-      } finally {
-        this.isSaving = false;
+
+      // 移除裁剪框（名称为 cropRect）
+      const cropRect = this.canvas.getObjects('rect').find(obj => obj.name === 'cropRect');
+      if (cropRect) {
+        this.canvas.remove(cropRect);
+        this.canvas.renderAll();
       }
-    }
+      this.canvas.getObjects().forEach(obj => {
+        if (obj.name === 'cropMask') this.canvas.remove(obj);
+      });
+    },
+    /////////////////////////////
+    updateBrushColor() {
+      if (this.canvas && this.canvas.freeDrawingBrush) {
+        this.canvas.freeDrawingBrush.color = this.drawing.color;
+      }
+    },
+    updateBrushWidth() {
+      if (this.canvas && this.canvas.freeDrawingBrush) {
+        this.canvas.freeDrawingBrush.width = parseInt(this.drawing.width, 10);
+      }
+    },
+    enableDrawingMode() {
+      if (this.canvas) {
+        this.canvas.isDrawingMode = true;
+        this.canvas.freeDrawingBrush.color = this.drawing.color;
+        this.canvas.freeDrawingBrush.width = parseInt(this.drawing.width, 10);
+      }
+    },
+    disableDrawingMode() {
+      if (this.canvas) {
+        this.canvas.isDrawingMode = false;
+      }
+    },
+    ////////////////////////////////
+    reset() {
+      const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
+      if (baseImage) {
+        baseImage.set({
+          angle: 0,
+          flipX: false,
+          flipY: false
+        });
+        this.currentFilter = null;
+        baseImage.filters = [];
+        baseImage.applyFilters();
+        this.canvas.renderAll();
+      }
+
+      this.adjustments = { ...this.initialAdjustments };
+      this.cropData = null;
+    },
+    /////////////////////////////
+    async save() {
+  try {
+    this.isSaving = true;
+
+    // 1️⃣ 获取当前 fabric canvas 的图像合成输出
+    const mergedDataUrl = this.canvas.toDataURL({
+      format: 'jpeg',
+      quality: 0.9,
+      multiplier: 1,
+      enableRetinaScaling: false
+    });
+
+    // 2️⃣ 将 DataURL 转为 Blob
+    const imageBlob = await new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(resolve, 'image/jpeg', 0.9);
+      };
+      img.onerror = () => {
+        throw new Error('合成图像加载失败');
+      };
+      img.src = mergedDataUrl;
+    });
+
+    // 3️⃣ 创建新文件名
+    const fullUrl = this.imageUrl.split('?')[0];
+    const urlParts = fullUrl.split('/');
+    const originalFilename = urlParts[urlParts.length - 1];
+    const filenameParts = originalFilename.split('.');
+    const extension = filenameParts.length > 1 ? filenameParts.pop() : 'jpg';
+    const baseName = filenameParts.join('.');
+    const newFilename = `${baseName}_edited_${Date.now()}.${extension}`;
+
+    const imageFile = new File([imageBlob], newFilename, { type: 'image/jpeg' });
+
+    // 4️⃣ 上传接口（保存到数据库或 OSS）
+    const formData = new FormData();
+    formData.append('file', imageFile);
+    formData.append('filename', newFilename);
+    formData.append('originUrl', this.imageUrl);
+
+    const token = localStorage.getItem('token');
+
+    await fetch('/api/photos/update', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData
+    });
+
+    // 5️⃣ 本地 URL 回传给父组件
+    const localPreviewUrl = URL.createObjectURL(imageBlob);
+    this.$emit('save-complete', {
+      url: localPreviewUrl,
+      file: imageFile,
+      filename: newFilename
+    });
+
+  } catch (error) {
+    console.error('保存失败:', error);
+    this.$emit('error', error);
+  } finally {
+    this.isSaving = false;
+  }
+}
+
   }
 }
 </script>
@@ -396,28 +750,34 @@ export default {
   gap: 20px;
   height: 100%;
 }
-
-.preview-container {
-  flex: 1;
-  position: relative;
-  background: #f5f5f5;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.preview {
-  width: 100%;
+.editor-canvas {
+  width: 500px;
   height: 100%;
+  border: 1px solid #ccc;
+}
+.scroll-container {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 4px 0;
+  scroll-snap-type: x mandatory;
+}
+.scroll-container button {
+  display: inline-block;
+  padding: 6px 12px;
+  margin-right: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+}
+.scroll-container button.active {
+  background: #333;
+  color: #fff;
 }
 
-.preview img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
+
+
 
 .overlay {
   position: absolute;
@@ -471,10 +831,8 @@ export default {
   width: 300px;
   background: white;
   border-radius: 8px;
-  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
 }
 
 .control-group {
@@ -487,46 +845,6 @@ export default {
   margin: 0;
   font-size: 16px;
   color: #333;
-}
-
-.control {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.control label {
-  font-size: 14px;
-  color: #666;
-}
-
-.control input[type="range"] {
-  width: 100%;
-  height: 4px;
-  background: #ddd;
-  border-radius: 2px;
-  outline: none;
-  -webkit-appearance: none;
-}
-
-.control input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #4caf50;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.control input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-.control .value {
-  font-size: 12px;
-  color: #666;
-  text-align: right;
 }
 
 .transform-controls {
@@ -593,6 +911,13 @@ export default {
 .filters span {
   font-size: 12px;
   color: #666;
+}
+
+.filter-preview-image {
+  max-width: 60px;
+  max-height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
 }
 
 .actions {
@@ -665,5 +990,85 @@ export default {
   .transform-controls {
     grid-template-columns: repeat(4, 1fr);
   }
+}
+.adjustment-strip {
+  overflow-x: auto;
+  white-space: nowrap;
+  margin: 10px 0;
+}
+
+.adjustment-slider {
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.adjustment-slider input[type="range"] {
+  flex: 1;
+}
+.sticker-thumb {
+  width: 50px;
+  height: 50px;
+  object-fit: contain; 
+}
+
+
+.stickers {
+  max-height: 120px; /* 根据需要调整高度 */
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  gap: 10px;
+  padding: 5px;
+  scroll-behavior: smooth;
+}
+
+.drawing-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+
+.drawing-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+input[type="color"] {
+  width: 40px;
+  height: 30px;
+  border: none;
+  cursor: pointer;
+}
+
+input[type="range"] {
+  width: 120px;
+}
+
+.drawing-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.drawing-buttons button {
+  padding: 6px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: none;
+  background-color: #3f80ff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.drawing-buttons button:hover {
+  background-color: #2c6ee0;
 }
 </style> 

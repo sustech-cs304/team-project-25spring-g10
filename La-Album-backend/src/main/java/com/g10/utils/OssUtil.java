@@ -168,5 +168,27 @@ public class OssUtil {
         }
     }
     
-    
+    public byte[] fetchImageData(String url) {
+        try {
+            // 如果是对象名称而不是完整URL，则生成签名URL
+            if (!url.startsWith("http")) {
+                url = generateSignedUrl(url);
+            }
+            
+            // 建立连接
+            java.net.URL imageUrl = new java.net.URL(url);
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) imageUrl.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(10000);
+            
+            // 获取图像数据
+            try (InputStream inputStream = connection.getInputStream()) {
+                return inputStream.readAllBytes();
+            }
+        } catch (Exception e) {
+            System.out.println("获取图像数据失败: " + e.getMessage());
+            throw new RuntimeException("获取图像数据失败", e);
+        }
+    }
 } 
