@@ -6,12 +6,14 @@ import com.g10.model.Photo;
 import com.g10.model.TrashedPhoto;
 import com.g10.repository.PhotoRepository;
 import com.g10.repository.TrashedPhotoRepository;
+import com.g10.repository.AlbumRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -25,12 +27,14 @@ public class PhotoService {
 
     private final PhotoRepository photoRepository;
     private final TrashedPhotoRepository trashedPhotoRepository;
+    private final AlbumRepository albumRepository;
     @PersistenceContext
     private EntityManager entityManager;
 
-    public PhotoService(PhotoRepository photoRepository, TrashedPhotoRepository trashedPhotoRepository) {
+    public PhotoService(PhotoRepository photoRepository, TrashedPhotoRepository trashedPhotoRepository, AlbumRepository albumRepository) {
         this.photoRepository = photoRepository;
         this.trashedPhotoRepository = trashedPhotoRepository;
+        this.albumRepository = albumRepository;
     }
 
     // 获取所有照片
@@ -38,11 +42,6 @@ public class PhotoService {
         return photoRepository.findAll();
     }
 
-    // 通过 ID 获取单张照片
-//    public Optional<Photo> getPhotoById(Long id) {
-//        return photoRepository.findById(id);
-//
-//    }
 
     public Optional<PhotoDTO> getPhotoById(Long id) {
         return photoRepository.findById(id)
@@ -53,8 +52,14 @@ public class PhotoService {
                         photo.getLocation(),
                         photo.getTags(),
                         photo.getUploadTime(),
-                        photo.getAlbum() != null ? photo.getAlbum().getId() : null
+                        photo.getAlbum() != null ? photo.getAlbum().getId() : null,
+                        photo.getDate(),
+                        photo.getDescription()
                 ));
+    }
+
+    public Optional<Photo> getPhotoEntityById(Long id) {
+        return photoRepository.findById(id);
     }
 
 
@@ -72,12 +77,24 @@ public class PhotoService {
     }
 
 
-    public void movePhoto(Long id, Album dest) {
-        Photo photo = photoRepository.findById(id)
+    public void movePhoto(Long photoId, Long destAlbumId) {
+        Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Photo not found"));
-        photo.setAlbum(dest);
+
+        Album destAlbum = albumRepository.findById(destAlbumId)
+                .orElseThrow(() -> new RuntimeException("Destination album not found"));
+
+        Album oldAlbum = photo.getAlbum();
+        if (oldAlbum != null) {
+            oldAlbum.getPhotos().remove(photo);
+        }
+
+        destAlbum.getPhotos().add(photo);
+        photo.setAlbum(destAlbum);
+
         photoRepository.save(photo);
     }
+
 
     public List<Photo> searchPhotos(String q, LocalDate startDate, LocalDate endDate, Long albumId) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();

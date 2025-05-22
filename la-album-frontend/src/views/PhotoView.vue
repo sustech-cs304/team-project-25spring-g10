@@ -56,6 +56,15 @@
                 分享
               </button>
 
+              <button class="btn" @click="openMoveDialog">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5l7 7-7 7"></path>
+                </svg>
+                移动
+              </button>
+
               <button class="btn btn-icon" @click="nextPhoto" v-if="hasNext">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -119,13 +128,32 @@
       </div>
     </div>
   </div>
+
+  <el-dialog v-model="moveDialogVisible" title="移动到其他相册" width="400px">
+    <el-radio-group v-model="selectedAlbumId">
+      <el-radio
+          v-for="album in albumList"
+          :key="album.id"
+          :label="album.id">
+        {{ album.title }}
+      </el-radio>
+    </el-radio-group>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="moveDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmMove">确定</el-button>
+      </span>
+    </template>
+  </el-dialog>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessageBox } from 'element-plus';
-import { fetchAlbumById, fetchPhotosInAlbum } from "@/api/album";
+import { ElMessageBox, ElMessage } from 'element-plus';
+import { fetchAlbumById, fetchPhotosInAlbum, fetchAlbumList } from "@/api/album";
+import {movePhoto} from "@/api/photo";
 
 const route = useRoute();
 const router = useRouter();
@@ -134,6 +162,9 @@ const photo = ref(null);
 const album = ref(null);
 const showDeleteModal = ref(false);
 const albumPhotos = ref([]);
+const moveDialogVisible = ref(false);
+const albumList = ref([]);
+const selectedAlbumId = ref(null);
 
 onMounted(async () => {
   const photoId = parseInt(route.params.id);
@@ -239,6 +270,38 @@ const deletePhoto = async () => {
     }
   } catch (error) {
     console.error('删除照片时出错:', error);
+  }
+};
+
+
+// 打开对话框并加载相册列表
+const openMoveDialog = async () => {
+  try {
+    const res = await fetchAlbumList(); // 你需要根据用户获取所有相册
+    console.log("album list in move: ", res);
+    albumList.value = res;
+    moveDialogVisible.value = true;
+  } catch (e) {
+    console.error('获取相册失败', e);
+    ElMessage.error('加载相册列表失败');
+  }
+};
+
+// 确认移动
+const confirmMove = async () => {
+  if (!selectedAlbumId.value) {
+    ElMessage.warning('请选择一个相册');
+    return;
+  }
+  try {
+    await movePhoto(photo.value.id, selectedAlbumId.value);
+    console.log("selected album id:", selectedAlbumId.value);
+    ElMessage.success('移动成功');
+    moveDialogVisible.value = false;
+    router.push({ name: 'Album', params: { id: selectedAlbumId.value } });
+  } catch (err) {
+    console.error('移动失败', err);
+    ElMessage.error('移动失败');
   }
 };
 

@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -47,7 +48,9 @@ public class PhotoController {
                     photo.getLocation(),
                     photo.getTags(),
                     photo.getUploadTime(),
-                    photo.getAlbum() != null ? photo.getAlbum().getId() : null
+                    photo.getAlbum() != null ? photo.getAlbum().getId() : null,
+                    photo.getDate(),
+                    photo.getDescription()
             );
         }).toList();
 
@@ -138,10 +141,10 @@ public class PhotoController {
         return ResponseEntity.noContent().build();
     }
 
-    // 移动照片到新相册
     @PutMapping("/{id}/move")
-    public ResponseEntity<Photo> movePhoto(@PathVariable Long id, @RequestBody Album dest) {
-        photoService.movePhoto(id, dest);
+    public ResponseEntity<Void> movePhoto(@PathVariable Long id, @RequestBody Map<String, Long> body) {
+        Long destAlbumId = body.get("id");
+        photoService.movePhoto(id, destAlbumId);
         return ResponseEntity.ok().build();
     }
 
@@ -162,7 +165,9 @@ public class PhotoController {
                     photo.getLocation(),
                     photo.getTags(),
                     photo.getUploadTime(),
-                    photo.getAlbum() != null ? photo.getAlbum().getId() : null
+                    photo.getAlbum() != null ? photo.getAlbum().getId() : null,
+                    photo.getDate(),
+                    photo.getDescription()
             );
         }).toList();
 
@@ -185,7 +190,7 @@ public class PhotoController {
 
         try {
             // 获取照片
-            Optional<Photo> photoOptional = photoService.getPhotoById(id);
+            Optional<Photo> photoOptional = photoService.getPhotoEntityById(id);
             if (photoOptional.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
@@ -198,9 +203,10 @@ public class PhotoController {
                 // 创建新照片对象
                 updatedPhoto = new Photo();
                 updatedPhoto.setTitle(title != null ? title : photo.getTitle());
-                updatedPhoto.setDescription(description != null ? description : photo.getDescription());
+                updatedPhoto.setTags(photo.getTags());
                 updatedPhoto.setDate(date != null ? date : photo.getDate());
                 updatedPhoto.setLocation(location != null ? location : photo.getLocation());
+                updatedPhoto.setDescription(description);
 
                 // 设置相册
                 if (albumId != null) {
