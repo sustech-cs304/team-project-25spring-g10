@@ -11,9 +11,9 @@
 - cd *tend
 - pnpm run serve
 
-风格迁移
-- 首次 conda env create[根据environment.yml安装依赖]
+风格迁移 pytorch-neural-style-transfer
 - cd pytorch-neural-style-transfer
+- 首次 conda env create[根据environment.yml安装依赖]
 - conda activate pytorch-nst
 - uvicorn main:app --reload --port 8000
     [出现
@@ -24,4 +24,3 @@
     INFO:     Waiting for application startup.
     INFO:     Application startup complete.
     ]
-    

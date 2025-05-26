@@ -144,24 +144,6 @@
           </div>
         </div>
       </div>
-      
-      <div class="actions">
-        <button 
-          class="reset-button"
-          @click="reset"
-          :disabled="!hasChanges"
-        >
-          重置
-        </button>
-        <button 
-          class="save-button"
-          @click="save"
-          :disabled="isSaving || !hasChanges"
-        >
-          <span v-if="isSaving">保存中...</span>
-          <span v-else>保存</span>
-        </button>
-      </div>
     </div>
   </div>
 </template>
@@ -407,6 +389,28 @@ export default {
 
       overlayCtx.drawImage(overlayImage, 0, 0, baseCanvas.width, baseCanvas.height);
       return overlay;
+    },
+    async exportEditedImage() {
+      const dataUrl = this.canvas.toDataURL({ format: 'jpeg', quality: 0.9 });
+      const imageBlob = await new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob(resolve, 'image/jpeg', 0.9);
+        };
+        img.src = dataUrl;
+      });
+      
+      const originalFilename = this.imageUrl.split('/').pop().split('?')[0];
+      let newFilename = originalFilename+`.jpg`;
+      const file = new File([imageBlob], newFilename, { type: 'image/jpeg' });
+      console.log('[DEBUG] originalFilename:', originalFilename);
+      console.log('[DEBUG] newFilename:', newFilename);
+      return { file, filename: newFilename };
     },
 
     handleImageLoad(event) {
@@ -666,80 +670,7 @@ export default {
 
       this.adjustments = { ...this.initialAdjustments };
       this.cropData = null;
-    },
-    /////////////////////////////
-    async save() {
-  try {
-    this.isSaving = true;
-
-    // 1️⃣ 获取当前 fabric canvas 的图像合成输出
-    const mergedDataUrl = this.canvas.toDataURL({
-      format: 'jpeg',
-      quality: 0.9,
-      multiplier: 1,
-      enableRetinaScaling: false
-    });
-
-    // 2️⃣ 将 DataURL 转为 Blob
-    const imageBlob = await new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        canvas.toBlob(resolve, 'image/jpeg', 0.9);
-      };
-      img.onerror = () => {
-        throw new Error('合成图像加载失败');
-      };
-      img.src = mergedDataUrl;
-    });
-
-    // 3️⃣ 创建新文件名
-    const fullUrl = this.imageUrl.split('?')[0];
-    const urlParts = fullUrl.split('/');
-    const originalFilename = urlParts[urlParts.length - 1];
-    const filenameParts = originalFilename.split('.');
-    const extension = filenameParts.length > 1 ? filenameParts.pop() : 'jpg';
-    const baseName = filenameParts.join('.');
-    const newFilename = `${baseName}_edited_${Date.now()}.${extension}`;
-
-    const imageFile = new File([imageBlob], newFilename, { type: 'image/jpeg' });
-
-    // 4️⃣ 上传接口（保存到数据库或 OSS）
-    const formData = new FormData();
-    formData.append('file', imageFile);
-    formData.append('filename', newFilename);
-    formData.append('originUrl', this.imageUrl);
-
-    const token = localStorage.getItem('token');
-
-    await fetch('/api/photos/update', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData
-    });
-
-    // 5️⃣ 本地 URL 回传给父组件
-    const localPreviewUrl = URL.createObjectURL(imageBlob);
-    this.$emit('save-complete', {
-      url: localPreviewUrl,
-      file: imageFile,
-      filename: newFilename
-    });
-
-  } catch (error) {
-    console.error('保存失败:', error);
-    this.$emit('error', error);
-  } finally {
-    this.isSaving = false;
-  }
-}
-
+    }
   }
 }
 </script>
@@ -954,14 +885,6 @@ export default {
   background: #1976d2;
 }
 
-.save-button {
-  background: #4caf50;
-  color: white;
-}
-
-.save-button:hover:not(:disabled) {
-  background: #388e3c;
-}
 
 .actions button:disabled {
   opacity: 0.5;

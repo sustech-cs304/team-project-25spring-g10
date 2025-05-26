@@ -1,5 +1,4 @@
 <template>
-
   <div class="edit-photo">
     <div class="header">
       <h1>编辑照片</h1>
@@ -8,7 +7,7 @@
         <button 
           class="save-button" 
           @click="save"
-          :disabled="isSaving || !hasChanges"
+          :disabled="isSaving"
         >
           <span v-if="isSaving">保存中...</span>
           <span v-else>保存</span>
@@ -29,6 +28,7 @@
     <div v-else class="content">
       <div class="editor-section">
         <image-editor v-if="signedBlobUrl"
+          ref="editor"
           :image-url="signedBlobUrl"
           :alt="photo.title"
           :initial-adjustments="initialAdjustments"
@@ -157,18 +157,6 @@ export default {
       editedFile: null,
       editedFilename: '',
       signedBlobUrl: ''
-    }
-  },
-  computed: {
-    hasChanges() {
-      return (
-        this.photo.title !== '' ||
-        this.photo.description !== '' ||
-        this.photo.date !== '' ||
-        this.photo.location !== '' ||
-        this.photo.albumId !== '' ||
-        this.photo.tags.length > 0
-      );
     }
   },
   created() {
@@ -303,46 +291,41 @@ export default {
     async save() {
       try {
         this.isSaving = true;
-        
         const formData = new FormData();
+        const editor = this.$refs.editor;
+        const { file, filename } = await editor.exportEditedImage();
+        if (!file) {
+          alert('未检测到编辑后的图像');
+          console.warn('[DEBUG] exportEditedImage 返回空 file');
+          return;
+        }
+        console.log('[DEBUG] file:', file);
+        console.log('[DEBUG] filename:', filename);
+        formData.append('file', file, filename); 
+        formData.append('albumId', this.photo.albumId);
         formData.append('title', this.photo.title);
         formData.append('description', this.photo.description);
-        formData.append('date', this.photo.date);
         formData.append('location', this.photo.location);
-        formData.append('albumId', this.photo.albumId);
+        formData.append('date', this.photo.date);
         formData.append('tags', JSON.stringify(this.photo.tags));
-        
-        // 如果有编辑后的图片，添加到表单
-        if (this.editedFile) {
-          // 使用新的文件对象和文件名
-          formData.append('image', this.editedFile, this.editedFilename);
-          formData.append('saveAsNew', 'true'); // 告诉后端保存为新文件
-        } else if (this.photo.url.startsWith('blob:')) {
-          // 兼容旧逻辑
-          const response = await fetch(this.photo.url);
-          const blob = await response.blob();
-          formData.append('image', blob, 'edited.jpg');
-          formData.append('saveAsNew', 'true'); // 告诉后端保存为新文件
-        }
-        
-        // 添加token到请求头
+
         const token = localStorage.getItem('token');
-        
-        const response = await fetch(`/api/photos/${this.photo.id}`, {
-          method: 'PUT',
+        console.log('[DEBUG] 正在上传...');
+        const response = await fetch('/api/photos/upload', {
+          method: 'POST',
           headers: {
-            'Authorization': `${token}`
+            'Authorization': `${token}`,
           },
           body: formData
         });
-        
-        if (!response.ok) throw new Error('保存失败');
-        
+
+        if (!response.ok) throw new Error('上传失败');
         const data = await response.json();
+        this.photo.url = data.url;  // 如果后端返回新图片地址
+        alert('保存成功！');
         this.$emit('save-complete', data);
-        this.$router.push(`/photos/${data.id || this.photo.id}`);
       } catch (error) {
-        console.error('保存失败:', error);
+        console.error('[DEBUG] 上传失败:', error);
         this.$emit('error', error);
       } finally {
         this.isSaving = false;

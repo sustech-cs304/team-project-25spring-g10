@@ -1,5 +1,5 @@
 package com.g10.controller;
-
+import com.g10.repository.UserRepository;
 import com.g10.dto.PhotoDTO;
 import com.g10.model.Album;
 import com.g10.model.Photo;
@@ -8,6 +8,7 @@ import com.g10.service.AlbumService;
 import com.g10.service.PhotoService;
 import com.g10.service.UserService;
 import com.g10.utils.OssUtil;
+import com.g10.utils.ThreadLocalUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,9 @@ public class PhotoController {
 
     @Autowired
     private PhotoService photoService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private OssUtil ossUtil;
@@ -75,8 +79,7 @@ public class PhotoController {
     @PostMapping("/upload")
     public ResponseEntity<Photo> uploadPhoto(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("albumId") Long albumId,
-            @RequestParam("userId") Long userId) {
+            @RequestParam("albumId") Long albumId) {
         try {
             // 验证文件
             validateFile(file);
@@ -88,12 +91,11 @@ public class PhotoController {
                 if (album == null) {
                     return ResponseEntity.badRequest().build();
                 }
-            } else {
-                album = albumService.getDefaultAlbumForUser(userId);
-            }
-            if (album == null) {
+            } 
+            else {
                 throw new RuntimeException("Album not found");
             }
+            System.out.println("即将上传到OSS的文件名：" + file.getOriginalFilename());
             // 上传到 OSS
             String url = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
 
@@ -284,39 +286,42 @@ public class PhotoController {
         }
     }
 
-    // @PostMapping("/upload-new-version")
-    // public ResponseEntity<?> uploadNewVersion(
-    //         @RequestParam("file") MultipartFile file,
-    //         @RequestParam("filename") String filename,
-    //         @RequestParam("originUrl") String originUrl,
-    //         HttpServletRequest request) {
-    //     try {
-    //         // 1. 获取当前用户（例如从 token 提取）
-    //         String userId = authService.extractUserId(request);
+    @PostMapping("/api/photos")
+    public ResponseEntity<?> uploadPhoto(
+            @RequestParam("image") MultipartFile file,
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam(value = "date", required = false) String date,
+            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "albumId", required = false) String albumId,
+            @RequestParam(value = "tags", required = false) String tagsJson,
+            HttpServletRequest request
+    ) {
+        try {
+            Map<String, Object> userInfo = ThreadLocalUtil.get();
+            Long userId = Long.valueOf(userInfo.get("id").toString());
+            String ossUrl = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
 
-    //         // 2. 构造新路径
-    //         String basePath = extractBasePathFromUrl(originUrl); // 提取 OSS 路径
-    //         String timestamp = String.valueOf(System.currentTimeMillis());
+            Photo newPhoto = new Photo();
+            newPhoto.setTitle(title);
+            newPhoto.setDescription(description);
+            newPhoto.setDate(date);
+            newPhoto.setLocation(location);
+            if (albumId != null && !albumId.isEmpty()) {
+                Album album = albumService.getAlbumById(Long.parseLong(albumId));
+                if (album != null) {
+                    newPhoto.setAlbum(album);
+                }
+            }
+            newPhoto.setTags(tagsJson);
+            newPhoto.setUrl(ossUrl);
 
-    //         String fileExtension = filename.substring(filename.lastIndexOf("."));
-    //         String newFilename = filename.substring(0, filename.lastIndexOf(".")) + "_v" + timestamp + fileExtension;
-    //         String versionedKey = basePath + "/versions/" + newFilename;
-
-    //         // 3. 上传新版本文件
-    //         String uploadedUrl = ossUtil.uploadFile(versionedKey, file.getInputStream());
-
-    //         // 4. 写入数据库记录（你需要在 PhotoService 实现这个方法）
-    //         photoService.saveNewVersion(userId, originUrl, uploadedUrl, filename);
-
-    //         // 5. 返回成功响应
-    //         Map<String, String> response = new HashMap<>();
-    //         response.put("url", uploadedUrl);
-    //         response.put("versionKey", versionedKey);
-
-    //         return ResponseEntity.ok(response);
-    //     } catch (Exception e) {
-    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("上传失败：" + e.getMessage());
-    //     }
-    // }
+            photoService.savePhoto(newPhoto);
+            return ResponseEntity.ok(newPhoto);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("上传失败: " + e.getMessage());
+        }
+    }
 
 }
