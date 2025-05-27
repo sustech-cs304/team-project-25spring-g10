@@ -460,6 +460,7 @@ export default {
 }
 
 .editor-section {
+  width:900px;
   background: white;
   border-radius: 8px;
   overflow: hidden;
@@ -468,6 +469,7 @@ export default {
 }
 
 .info-section {
+  width:300px;
   background: white;
   border-radius: 8px;
   padding: 20px;

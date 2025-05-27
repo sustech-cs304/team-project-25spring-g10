@@ -1,23 +1,8 @@
 <template>
   <div class="image-editor">
-    <canvas ref="canvas" class="editor-canvas"></canvas>
-    <div class="overlay" v-if="isCropping">
-        <div class="crop-overlay">
-          <Cropper
-            ref="cropper"
-            :src="imageUrl"
-            :stencil-props="{ aspectRatio: 1 }"
-            :autoZoom="true"
-            :resizeImage="true"
-            @change="onCropChange"
-          />
-        </div>
-        <div class="crop-controls">
-          <button @click="applyCrop" :disabled="isSaving">应用</button>
-        </div>
-      </div>
-
-
+    <div class="canvas-wrapper">
+      <canvas ref="canvas" class="editor-canvas"></canvas>
+    </div>
     <div class="editor-controls">
       <div class="control-group">
         <h3>基本调整</h3>
@@ -90,6 +75,9 @@
             </svg>
           </button>
         </div>
+        <div class="crop-controls" v-if="cropRectReady">
+          <button @click="applyCrop" :disabled="isSaving">应用</button>
+        </div>
       </div>
 
       <div class="control-group">
@@ -149,7 +137,6 @@
 </template>
 
 <script>
-import { Cropper } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'
 // import { Canvas, FabricImage } from 'fabric';
 import { fabric } from 'fabric';
@@ -158,9 +145,6 @@ import { fabric } from 'fabric';
 
 export default {
   name: 'ImageEditor',
-  components: {
-    Cropper
-  },
   props: {
     imageUrl: {
       type: String,
@@ -184,6 +168,7 @@ export default {
   },
   data() {
     return {
+      cropRectReady: false,
       drawing: {
         color: '#000000',
         width: 5,
@@ -203,14 +188,14 @@ export default {
       adjustments: {},
       activeAdjustment: 'brightness',
       filters: [
-        { name: 'normal', label: '原图', style: 'none' },
-        { name: 'grayscale', label: '黑白', style: 'grayscale(100%)' },
-        { name: 'sepia', label: '复古', style: 'sepia(100%)' },
-        { name: 'vintage', label: '复古', style: 'sepia(50%) contrast(120%)' },
-        { name: 'warm', label: '暖色', style: 'sepia(30%) saturate(140%)' },
-        { name: 'cool', label: '冷色', style: 'saturate(80%) hue-rotate(180deg)' },
-        { name: 'dramatic', label: '戏剧', style: 'contrast(130%) saturate(120%)' },
-        { name: 'fade', label: '褪色', style: 'contrast(90%) saturate(80%)' }
+      { name: 'normal', label: '原图', style: 'none' },
+      { name: 'grayscale', label: '黑白', style: 'grayscale(100%)' },
+      { name: 'sepia', label: '复古', style: 'sepia(100%)' },
+      { name: 'warm', label: '暖色', style: 'sepia(10%) saturate(50%) brightness(110%)' },
+      { name: 'cool', label: '冷色', style: 'hue-rotate(200deg) saturate(120%) brightness(90%)' },
+      { name: 'vivid', label: '鲜艳', style: 'contrast(120%) saturate(140%)' },
+      { name: 'fade', label: '褪色', style: 'contrast(85%) brightness(110%)' },
+      { name: 'matte', label: '哑光', style: 'grayscale(20%) brightness(105%) contrast(90%)' }
       ],
       stickers: [
         { label: '星星', src: '/stickers/star.png' },
@@ -391,7 +376,36 @@ export default {
       return overlay;
     },
     async exportEditedImage() {
-      const dataUrl = this.canvas.toDataURL({ format: 'jpeg', quality: 0.9 });
+      const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
+      if (!baseImage) return;
+
+      const originalWidth = baseImage.width;
+      const originalHeight = baseImage.height;
+      const scaleX = originalWidth / (baseImage.width * baseImage.scaleX);
+      const scaleY = originalHeight / (baseImage.height * baseImage.scaleY);
+
+      const scale = Math.min(scaleX, scaleY); // 保持等比缩放（防止变形）
+
+      // 创建离屏高清 Canvas
+      const tempCanvas = new fabric.StaticCanvas(null, {
+        width: originalWidth,
+        height: originalHeight,
+        backgroundColor: 'white',
+      });
+
+      for (const obj of this.canvas.getObjects()) {
+        const clone = fabric.util.object.clone(obj);
+        clone.left = (obj.left - baseImage.left) * scale;
+        clone.top = (obj.top - baseImage.top) * scale;
+        clone.scaleX = obj.scaleX * scale;
+        clone.scaleY = obj.scaleY * scale;
+        tempCanvas.add(clone);
+      }
+
+      tempCanvas.renderAll();
+
+      const dataUrl = tempCanvas.toDataURL({ format: 'jpeg', quality: 0.92 });
+
       const imageBlob = await new Promise(resolve => {
         const img = new Image();
         img.onload = () => {
@@ -400,18 +414,18 @@ export default {
           canvas.height = img.height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0);
-          canvas.toBlob(resolve, 'image/jpeg', 0.9);
+          canvas.toBlob(resolve, 'image/jpeg', 0.92);
         };
         img.src = dataUrl;
       });
-      
+
       const originalFilename = this.imageUrl.split('/').pop().split('?')[0];
-      let newFilename = originalFilename+`.jpg`;
+      const newFilename = `${originalFilename}.jpg`;
       const file = new File([imageBlob], newFilename, { type: 'image/jpeg' });
-      console.log('[DEBUG] originalFilename:', originalFilename);
-      console.log('[DEBUG] newFilename:', newFilename);
+
       return { file, filename: newFilename };
     },
+
 
     handleImageLoad(event) {
       this.originalImage = event.target;
@@ -487,27 +501,24 @@ export default {
       this.canvas.renderAll();
     },
     startCrop() {
+      this.cropRectReady = true;
       const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
       if (!baseImage) return;
 
-      // 清除旧框和遮罩
       this.canvas.getObjects().forEach(obj => {
         if (['cropRect', 'cropMask'].includes(obj.name)) this.canvas.remove(obj);
       });
 
-      // 获取缩放后的图像边界（图像已经被 scaleX/scaleY 缩放）
-      const imgWidth = baseImage.width * baseImage.scaleX;
-      const imgHeight = baseImage.height * baseImage.scaleY;
+      const imgWidth = baseImage.getScaledWidth();
+      const imgHeight = baseImage.getScaledHeight();
       const imgLeft = baseImage.left;
       const imgTop = baseImage.top;
 
-      // 设置裁剪框为图像大小的 60%
       const cropWidth = imgWidth * 0.6;
       const cropHeight = imgHeight * 0.6;
       const cropLeft = imgLeft + (imgWidth - cropWidth) / 2;
       const cropTop = imgTop + (imgHeight - cropHeight) / 2;
 
-      // 创建裁剪框
       const cropRect = new fabric.Rect({
         left: cropLeft,
         top: cropTop,
@@ -517,6 +528,8 @@ export default {
         stroke: 'red',
         strokeWidth: 1,
         name: 'cropRect',
+        originX: 'left',
+        originY: 'top',
         selectable: true,
         hasBorders: true,
         hasControls: true,
@@ -526,47 +539,92 @@ export default {
       this.canvas.add(cropRect);
       this.canvas.setActiveObject(cropRect);
 
-      // 添加遮罩并绑定裁剪框监听
       this.createFullScreenMask(cropRect);
     },
-    createFullScreenMask(cropRect) {
-      const canvasWidth = this.canvas.getWidth();
-      const canvasHeight = this.canvas.getHeight();
 
-      const mask = new fabric.Rect({
-        left: 0,
-        top: 0,
-        width: canvasWidth,
-        height: canvasHeight,
+    createFullScreenMask(cropRect) {
+      const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
+      if (!baseImage) return;
+
+      const imgLeft = baseImage.left;
+      const imgTop = baseImage.top;
+      const imgWidth = baseImage.getScaledWidth();
+      const imgHeight = baseImage.getScaledHeight();
+
+      const cropLeft = cropRect.left;
+      const cropTop = cropRect.top;
+      const cropWidth = cropRect.width * cropRect.scaleX;
+      const cropHeight = cropRect.height * cropRect.scaleY;
+
+      // 移除旧遮罩
+      this.canvas.getObjects().forEach(obj => {
+        if (obj.name && obj.name.startsWith('cropMaskPart')) {
+          this.canvas.remove(obj);
+        }
+      });
+
+      const createMaskPart = (options) => new fabric.Rect({
+        ...options,
         fill: 'rgba(0, 0, 0, 0.5)',
         selectable: false,
         evented: false,
-        name: 'cropMask',
       });
 
-      const hole = new fabric.Rect({
-        left: cropRect.left,
-        top: cropRect.top,
-        width: cropRect.width,
-        height: cropRect.height,
-        fill: 'white',
-        selectable: false,
-        evented: false,
-        globalCompositeOperation: 'destination-out',
-      });
+      const masks = [
+        // 上
+        createMaskPart({
+          name: 'cropMaskPart-top',
+          left: imgLeft,
+          top: imgTop,
+          width: imgWidth,
+          height: cropTop - imgTop
+        }),
+        // 下
+        createMaskPart({
+          name: 'cropMaskPart-bottom',
+          left: imgLeft,
+          top: cropTop + cropHeight,
+          width: imgWidth,
+          height: imgTop + imgHeight - (cropTop + cropHeight)
+        }),
+        // 左
+        createMaskPart({
+          name: 'cropMaskPart-left',
+          left: imgLeft,
+          top: cropTop,
+          width: cropLeft - imgLeft,
+          height: cropHeight
+        }),
+        // 右
+        createMaskPart({
+          name: 'cropMaskPart-right',
+          left: cropLeft + cropWidth,
+          top: cropTop,
+          width: imgLeft + imgWidth - (cropLeft + cropWidth),
+          height: cropHeight
+        }),
+      ];
 
-      const group = new fabric.Group([mask, hole], {
-        selectable: false,
-        evented: false,
-        name: 'cropMask',
-      });
+      masks.forEach(mask => this.canvas.add(mask));
+      this.canvas.bringToFront(cropRect);
 
-      this.canvas.add(group);
-      this.canvas.sendToBack(group);
+      // 实时更新遮罩位置
+      const updateMasks = () => {
+        const l = cropRect.left;
+        const t = cropRect.top;
+        const w = cropRect.width * cropRect.scaleX;
+        const h = cropRect.height * cropRect.scaleY;
 
-      // 监听裁剪框变化，实时更新遮罩
-      cropRect.on('moving', () => this.updateCropMask(cropRect));
-      cropRect.on('scaling', () => this.updateCropMask(cropRect));
+        masks[0].set({ top: imgTop, left: imgLeft, width: imgWidth, height: t - imgTop });  // 上
+        masks[1].set({ top: t + h, left: imgLeft, width: imgWidth, height: (imgTop + imgHeight) - (t + h) }); // 下
+        masks[2].set({ top: t, left: imgLeft, width: l - imgLeft, height: h });             // 左
+        masks[3].set({ top: t, left: l + w, width: (imgLeft + imgWidth) - (l + w), height: h }); // 右
+
+        this.canvas.requestRenderAll();
+      };
+
+      cropRect.on('moving', updateMasks);
+      cropRect.on('scaling', updateMasks);
     },
     updateCropMask(cropRect) {
       const group = this.canvas.getObjects().find(obj => obj.name === 'cropMask');
@@ -582,39 +640,77 @@ export default {
       group.dirty = true;
       this.canvas.requestRenderAll();
     },
-
     async applyCrop() {
-      const cropRect = this.canvas.getObjects('rect').find(obj => obj.name === 'cropRect');
-      const baseImage = this.canvas.getObjects('image').find(obj => obj.name === 'baseImage');
+      const cropRect = this.canvas.getObjects().find(obj => obj.name === 'cropRect');
+      const baseImage = this.canvas.getObjects().find(obj => obj.name === 'baseImage');
       if (!cropRect || !baseImage) return;
 
-      // 将裁剪区域转换为 clipPath
-      const clipPath = new fabric.Rect({
-        left: 0,
-        top: 0,
-        width: cropRect.width * cropRect.scaleX,
-        height: cropRect.height * cropRect.scaleY,
-        originX: 'left',
-        originY: 'top',
-      });
+      const imgEl = baseImage.getElement(); // HTMLImageElement
+      const baseScale = baseImage.scaleX;
 
-      const offsetLeft = cropRect.left;
-      const offsetTop = cropRect.top;
+      const offsetX = (cropRect.left - baseImage.left) / baseScale;
+      const offsetY = (cropRect.top - baseImage.top) / baseScale;
+      const cropW = (cropRect.width * cropRect.scaleX) / baseScale;
+      const cropH = (cropRect.height * cropRect.scaleY) / baseScale;
 
-      baseImage.clipPath = clipPath;
-      baseImage.left = -offsetLeft;
-      baseImage.top = -offsetTop;
+      // 离屏裁剪原图区域
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = cropW;
+      offCanvas.height = cropH;
+      const ctx = offCanvas.getContext('2d');
 
-      // 重新设置 canvas 尺寸以适配裁剪
-      this.canvas.setWidth(clipPath.width);
-      this.canvas.setHeight(clipPath.height);
-      this.canvas.centerObject(baseImage);
+      ctx.drawImage(
+        imgEl,
+        offsetX, offsetY, cropW, cropH,
+        0, 0, cropW, cropH
+      );
+
+      const croppedDataUrl = offCanvas.toDataURL('image/jpeg', 0.92);
+
+      // 裁剪后不改变 canvas 尺寸，而是让图适应 canvas 容器
+      fabric.Image.fromURL(croppedDataUrl, (croppedImg) => {
+        const canvasEl = this.$refs.canvas;
+        const maxWidth = canvasEl.clientWidth;
+        const maxHeight = canvasEl.clientHeight;
+
+        this.canvas.clear(); // 保持 canvas 尺寸不变
+        this.canvas.setWidth(maxWidth);
+        this.canvas.setHeight(maxHeight);
+
+        // 缩放图像以适应 canvas，防止溢出
+        const scaleX = maxWidth / croppedImg.width;
+        const scaleY = maxHeight / croppedImg.height;
+        const scale = Math.min(scaleX, scaleY);
+
+        const imgDisplayWidth = croppedImg.width * scale;
+        const imgDisplayHeight = croppedImg.height * scale;
+
+        croppedImg.set({
+          left: (maxWidth - imgDisplayWidth) / 2,
+          top: (maxHeight - imgDisplayHeight) / 2,
+          scaleX: scale,
+          scaleY: scale,
+          selectable: false,
+          evented: false,
+          name: 'baseImage'
+        });
+
+        this.canvas.add(croppedImg);
+        this.canvas.sendToBack(croppedImg);
+        this.canvas.renderAll();
+      }, { crossOrigin: 'anonymous' });
+
+      // 移除裁剪框和遮罩
       this.canvas.getObjects().forEach(obj => {
-        if (obj.name === 'cropMask') this.canvas.remove(obj);
+        if (obj.name?.startsWith('cropMaskPart') || obj.name === 'cropRect') {
+          this.canvas.remove(obj);
+        }
       });
-      this.canvas.remove(cropRect);
-      this.canvas.renderAll();
+
+      this.cropRectReady = false;
+      this.isCropping = false;
     },
+
 
     cancelCrop() {
       this.isCropping = false;
@@ -681,11 +777,20 @@ export default {
   gap: 20px;
   height: 100%;
 }
+.canvas-wrapper {
+  flex-shrink: 0;
+  max-width: 500px;
+  display: flex;
+  align-items: flex-start;
+}
 .editor-canvas {
   width: 500px;
-  height: 100%;
+  min-height: 350px;
+  background: white;
   border: 1px solid #ccc;
+  display: block;
 }
+
 .scroll-container {
   display: flex;
   overflow-x: auto;
@@ -759,7 +864,7 @@ export default {
 }
 
 .editor-controls {
-  width: 300px;
+  width: 350px;
   background: white;
   border-radius: 8px;
   display: flex;
