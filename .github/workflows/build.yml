@@ -7,65 +7,36 @@ on:
     branches: [ "b12210260" ]
 
 jobs:
-  build-and-deploy:
-
+  build-and-push:
     runs-on: ubuntu-latest
 
+    env:
+      DOCKERHUB_USERNAME: cyy1019
+      FRONTEND_IMAGE: cyy1019/la-album-frontend
+      BACKEND_IMAGE: cyy1019/la-album-backend
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    - name: Checkout source code
+      uses: actions/checkout@v4
 
-      # ------- Backend Build -------
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    # Login to Docker Hub
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Build Backend with Maven
-        run: |
-          cd La-Album-backend
-          mvn clean install -DskipTests
+    # Build and push backend image
+    - name: Build backend Docker image
+      run: |
+        cd La-Album-backend
+        ./mvnw clean package -DskipTests
+        docker build -t $BACKEND_IMAGE:latest .
+        docker push $BACKEND_IMAGE:latest
 
-      - name: Upload Backend Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-jar
-          path: La-Album-backend/target/*.jar
-
-      # ------- Frontend Build -------
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install & Build Frontend
-        run: |
-          cd la-album-frontend
-          npm install
-          npm run build
-
-      - name: Upload Frontend Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: la-album-frontend/dist
-
-      # ------- Docker Build & Deploy -------
-      - name: Build Docker Images
-        run: |
-          docker build -t album-backend -f docker/backend.Dockerfile ./La-Album-backend
-          docker build -t album-frontend -f docker/frontend.Dockerfile ./la-album-frontend
-
-      - name: Save Docker Images
-        run: |
-          docker save album-backend > album-backend.tar
-          docker save album-frontend > album-frontend.tar
-
-      - name: Upload Docker Images
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-images
-          path: |
-            album-backend.tar
-            album-frontend.tar
+    # Build and push frontend image
+    - name: Build frontend Docker image
+      run: |
+        cd La-Album-frontend
+        docker build -t $FRONTEND_IMAGE:latest .
+        docker push $FRONTEND_IMAGE:latest

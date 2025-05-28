@@ -1,11 +1,22 @@
-version: '3'
+version: '3.8'
+
 services:
   backend:
-    image: album-backend
+    image: your-dockerhub-username/la-album-backend:latest
     ports:
       - "9090:9090"
+    networks:
+      - app-network
 
   frontend:
-    image: album-frontend
+    image: your-dockerhub-username/la-album-frontend:latest
     ports:
       - "8080:8080"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
