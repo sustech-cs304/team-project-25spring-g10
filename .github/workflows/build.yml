@@ -13,7 +13,7 @@ jobs:
     env:
       DOCKERHUB_USERNAME: cyy1019
       FRONTEND_IMAGE: cyy1019/la-album-frontend
-      BACKEND_IMAGE: cyy1019/La-Album-backend
+      BACKEND_IMAGE: cyy1019/la-album-backend
 
     steps:
     - name: Checkout source code

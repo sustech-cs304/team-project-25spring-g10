@@ -2,14 +2,14 @@ version: '3.8'
 
 services:
   backend:
-    image: your-dockerhub-username/La-Album-backend:latest
+    image: cyy1019/la-album-backend:latest
     ports:
       - "9090:9090"
     networks:
       - app-network
 
   frontend:
-    image: your-dockerhub-username/la-album-frontend:latest
+    image: cyy1019/la-album-frontend:latest
     ports:
       - "8080:8080"
     depends_on:
