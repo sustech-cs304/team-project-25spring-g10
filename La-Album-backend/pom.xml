@@ -150,16 +150,15 @@
   </dependencies>
 
   <build>
-
-  <plugin>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-maven-plugin</artifactId>
-      <version>3.4.1</version>
-      <configuration>
-        <mainClass>com.g10.LaAlbumBackendApplication</mainClass>
-      </configuration>
-    </plugin>
     <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>3.4.1</version>
+        <configuration>
+          <mainClass>com.g10.LaAlbumBackendApplication</mainClass>
+        </configuration>
+      </plugin>
       <!-- JaCoCo 插件用于生成覆盖率报告 -->
       <plugin>
         <groupId>org.jacoco</groupId>
