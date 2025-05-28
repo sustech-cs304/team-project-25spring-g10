@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   backend:
-    image: your-dockerhub-username/la-album-backend:latest
+    image: your-dockerhub-username/La-Album-backend:latest
     ports:
       - "9090:9090"
     networks:
