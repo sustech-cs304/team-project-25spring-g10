@@ -1,0 +1,11 @@
+version: '3'
+services:
+  backend:
+    image: album-backend
+    ports:
+      - "9090:9090"
+
+  frontend:
+    image: album-frontend
+    ports:
+      - "8080:8080"
