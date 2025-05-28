@@ -41,7 +41,7 @@ jobs:
 
       - name: Install & Build Frontend
         run: |
-          cd La-Album-frontend
+          cd la-album-frontend
           npm install
           npm run build
 
@@ -49,13 +49,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: La-Album-frontend/dist
+          path: la-album-frontend/dist
 
       # ------- Docker Build & Deploy -------
       - name: Build Docker Images
         run: |
           docker build -t album-backend -f docker/backend.Dockerfile ./La-Album-backend
-          docker build -t album-frontend -f docker/frontend.Dockerfile ./La-Album-frontend
+          docker build -t album-frontend -f docker/frontend.Dockerfile ./la-album-frontend
 
       - name: Save Docker Images
         run: |
