@@ -5,8 +5,13 @@ services:
     image: cyy1019/la-album-backend:latest
     ports:
       - "9090:9090"
+    depends_on:
+      - redis
     networks:
       - app-network
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
 
   frontend:
     image: cyy1019/la-album-frontend:latest
@@ -16,6 +21,20 @@ services:
       - backend
     networks:
       - app-network
+
+  redis:
+    image: redis:7.2
+    container_name: redis-server
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    restart: unless-stopped
+
+volumes:
+  redis-data:
 
 networks:
   app-network:
