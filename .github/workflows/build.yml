@@ -2,9 +2,9 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ b1221026 ]
+    branches: [ "b1221026" ]
   pull_request:
-    branches: [ b1221026 ]
+    branches: [ "b1221026" ]
 
 jobs:
   build-frontend:
