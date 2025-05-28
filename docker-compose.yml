@@ -7,16 +7,20 @@ services:
       - "9090:9090"
     depends_on:
       - redis
+      - postgres
     networks:
       - app-network
     environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: chenyanyu20041019
       REDIS_HOST: redis
       REDIS_PORT: 6379
 
   frontend:
     image: cyy1019/la-album-frontend:latest
     ports:
-      - "8080:8080"
+      - "8080:80"
     depends_on:
       - backend
     networks:
@@ -33,8 +37,24 @@ services:
       - app-network
     restart: unless-stopped
 
+  postgres:
+    image: postgres:15
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: chenyanyu20041019
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: unless-stopped
+
 volumes:
   redis-data:
+  pgdata:
 
 networks:
   app-network:
