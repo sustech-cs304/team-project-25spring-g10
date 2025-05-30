@@ -19,6 +19,8 @@
             <li><router-link to="/albums" class="nav-link" :class="{ 'active': currentRoute.includes('/album') }">相册管理</router-link></li>
             <li><router-link to="/memories" class="nav-link" :class="{ 'active': currentRoute.includes('/memor') }">回忆视频</router-link></li>
             <li><router-link to="/search" class="nav-link" :class="{ 'active': currentRoute === '/search' }">搜索照片</router-link></li>
+            <li><router-link to="/people" class="nav-link" :class="{ 'active': currentRoute === '/people' }">人脸识别</router-link></li>
+            <li><router-link to="/catagory" class="nav-link" :class="{ 'active': currentRoute === '/catagory' }">自动分类</router-link></li>
             <li><router-link to="/trash" class="nav-link" :class="{ 'active': currentRoute === '/trash' }">回收站</router-link></li>
           </ul>
         </nav>
@@ -140,6 +142,8 @@
           <li><router-link to="/albums" class="mobile-nav-link" @click="closeMobileMenu">相册管理</router-link></li>
           <li><router-link to="/memories" class="mobile-nav-link" @click="closeMobileMenu">回忆视频</router-link></li>
           <li><router-link to="/search" class="mobile-nav-link" @click="closeMobileMenu">搜索照片</router-link></li>
+          <li><router-link to="/people" class="mobile-nav-link" @click="closeMobileMenu">人脸识别</router-link></li>
+          <li><router-link to="/catagory" class="mobile-nav-link" @click="closeMobileMenu">自动分类</router-link></li>
           <li><router-link to="/trash" class="mobile-nav-link" @click="closeMobileMenu">回收站</router-link></li>
           <li class="mobile-nav-action" @click="createNewAlbum">新建相册</li>
           <li class="mobile-nav-action" @click="uploadPhotos">上传照片</li>
