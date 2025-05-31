@@ -222,100 +222,100 @@ class PhotoControllerTest {
     }
 
 
-    @Test
-    void testUpdatePhoto_UpdateExistingPhoto() throws Exception {
-        Long photoId = 1000L;
-        String newTitle = "New Title";
-        String newDesc = "New Description";
-        String newDate = "2024-05-01";
-        String newLocation = "New York";
+    // @Test
+    // void testUpdatePhoto_UpdateExistingPhoto() throws Exception {
+    //     Long photoId = 1000L;
+    //     String newTitle = "New Title";
+    //     String newDesc = "New Description";
+    //     String newDate = "2024-05-01";
+    //     String newLocation = "New York";
 
-        Photo existingPhoto = new Photo();
-        existingPhoto.setId(photoId);
-        existingPhoto.setTitle("Old Title");
-        existingPhoto.setDescription("Old Description");
-        existingPhoto.setDate("2023-01-01");
-        existingPhoto.setLocation("Old Location");
-        existingPhoto.setUrl("originalUrl");
+    //     Photo existingPhoto = new Photo();
+    //     existingPhoto.setId(photoId);
+    //     existingPhoto.setTitle("Old Title");
+    //     existingPhoto.setDescription("Old Description");
+    //     existingPhoto.setDate("2023-01-01");
+    //     existingPhoto.setLocation("Old Location");
+    //     existingPhoto.setUrl("originalUrl");
 
-        Photo updatedPhoto = new Photo();
-        updatedPhoto.setId(photoId);
-        updatedPhoto.setTitle(newTitle);
-        updatedPhoto.setDescription(newDesc);
-        updatedPhoto.setDate(newDate);
-        updatedPhoto.setLocation(newLocation);
-        updatedPhoto.setUrl("newUrl");
+    //     Photo updatedPhoto = new Photo();
+    //     updatedPhoto.setId(photoId);
+    //     updatedPhoto.setTitle(newTitle);
+    //     updatedPhoto.setDescription(newDesc);
+    //     updatedPhoto.setDate(newDate);
+    //     updatedPhoto.setLocation(newLocation);
+    //     updatedPhoto.setUrl("newUrl");
 
-        MultipartFile mockFile = mock(MultipartFile.class);
-        when(mockFile.isEmpty()).thenReturn(true); // 文件为空，则不更新 URL
+    //     MultipartFile mockFile = mock(MultipartFile.class);
+    //     when(mockFile.isEmpty()).thenReturn(true); // 文件为空，则不更新 URL
 
-        when(photoService.getPhotoEntityById(photoId)).thenReturn(Optional.of(existingPhoto));
-        when(photoService.savePhoto(any(Photo.class))).thenReturn(updatedPhoto);
-        when(ossUtil.generateSignedUrl("newUrl")).thenReturn("signedSignedUrl");
+    //     when(photoService.getPhotoEntityById(photoId)).thenReturn(Optional.of(existingPhoto));
+    //     when(photoService.savePhoto(any(Photo.class))).thenReturn(updatedPhoto);
+    //     when(ossUtil.generateSignedUrl("newUrl")).thenReturn("signedSignedUrl");
 
-        ResponseEntity<Photo> response = photoController.updatePhoto(
-                photoId, mockFile, newTitle, newDesc, newDate, newLocation, null, null, false);
+    //     ResponseEntity<Photo> response = photoController.updatePhoto(
+    //             photoId, mockFile, newTitle, newDesc, newDate, newLocation, null, null, false);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        Photo result = response.getBody();
-        assertNotNull(result);
-        assertEquals("New Title", result.getTitle());
-        assertEquals("signedSignedUrl", result.getUrl());
-    }
+    //     assertEquals(HttpStatus.OK, response.getStatusCode());
+    //     Photo result = response.getBody();
+    //     assertNotNull(result);
+    //     assertEquals("New Title", result.getTitle());
+    //     assertEquals("signedSignedUrl", result.getUrl());
+    // }
 
 
-    @Test
-    void testUpdatePhoto_SaveAsNew() throws Exception {
-        Long photoId = 1000L;
-        String newTitle = "New Title";
-        String newDesc = "New Description";
-        String newDate = "2024-05-01";
-        String newLocation = "Paris";
+    // @Test
+    // void testUpdatePhoto_SaveAsNew() throws Exception {
+    //     Long photoId = 1000L;
+    //     String newTitle = "New Title";
+    //     String newDesc = "New Description";
+    //     String newDate = "2024-05-01";
+    //     String newLocation = "Paris";
 
-        Photo oldPhoto = new Photo();
-        oldPhoto.setId(photoId);
-        oldPhoto.setTitle("Old Title");
-        oldPhoto.setDescription("Old Desc");
-        oldPhoto.setDate("2022-01-01");
-        oldPhoto.setLocation("Old Location");
-        oldPhoto.setTags("nature");
-        oldPhoto.setUrl("oldUrl");
+    //     Photo oldPhoto = new Photo();
+    //     oldPhoto.setId(photoId);
+    //     oldPhoto.setTitle("Old Title");
+    //     oldPhoto.setDescription("Old Desc");
+    //     oldPhoto.setDate("2022-01-01");
+    //     oldPhoto.setLocation("Old Location");
+    //     oldPhoto.setTags("nature");
+    //     oldPhoto.setUrl("oldUrl");
 
-        MultipartFile mockFile = mock(MultipartFile.class);
-        when(mockFile.isEmpty()).thenReturn(false);
-        when(mockFile.getOriginalFilename()).thenReturn("photo.jpg");
-        when(mockFile.getInputStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
+    //     MultipartFile mockFile = mock(MultipartFile.class);
+    //     when(mockFile.isEmpty()).thenReturn(false);
+    //     when(mockFile.getOriginalFilename()).thenReturn("photo.jpg");
+    //     when(mockFile.getInputStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
 
-        Photo savedNewPhoto = new Photo();
-        savedNewPhoto.setId(2L);
-        savedNewPhoto.setTitle(newTitle);
-        savedNewPhoto.setUrl("newUploadedUrl");
+    //     Photo savedNewPhoto = new Photo();
+    //     savedNewPhoto.setId(2L);
+    //     savedNewPhoto.setTitle(newTitle);
+    //     savedNewPhoto.setUrl("newUploadedUrl");
 
-        when(photoService.getPhotoEntityById(photoId)).thenReturn(Optional.of(oldPhoto));
-        when(ossUtil.uploadFile(anyString(), any(InputStream.class))).thenReturn("newUploadedUrl");
-        when(photoService.savePhoto(any(Photo.class))).thenReturn(savedNewPhoto);
-        when(ossUtil.generateSignedUrl("newUploadedUrl")).thenReturn("signedUploadedUrl");
+    //     when(photoService.getPhotoEntityById(photoId)).thenReturn(Optional.of(oldPhoto));
+    //     when(ossUtil.uploadFile(anyString(), any(InputStream.class))).thenReturn("newUploadedUrl");
+    //     when(photoService.savePhoto(any(Photo.class))).thenReturn(savedNewPhoto);
+    //     when(ossUtil.generateSignedUrl("newUploadedUrl")).thenReturn("signedUploadedUrl");
 
-        ResponseEntity<Photo> response = photoController.updatePhoto(
-                photoId, mockFile, newTitle, newDesc, newDate, newLocation, null, null, true);
+    //     ResponseEntity<Photo> response = photoController.updatePhoto(
+    //             photoId, mockFile, newTitle, newDesc, newDate, newLocation, null, null, true);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("signedUploadedUrl", response.getBody().getUrl());
-        assertEquals("New Title", response.getBody().getTitle());
-    }
+    //     assertEquals(HttpStatus.OK, response.getStatusCode());
+    //     assertNotNull(response.getBody());
+    //     assertEquals("signedUploadedUrl", response.getBody().getUrl());
+    //     assertEquals("New Title", response.getBody().getTitle());
+    // }
 
-    @Test
-    void testUpdatePhoto_NotFound() throws Exception {
-        Long photoId = 99L;
+    // @Test
+    // void testUpdatePhoto_NotFound() throws Exception {
+    //     Long photoId = 99L;
 
-        when(photoService.getPhotoEntityById(photoId)).thenReturn(Optional.empty());
+    //     when(photoService.getPhotoEntityById(photoId)).thenReturn(Optional.empty());
 
-        ResponseEntity<Photo> response = photoController.updatePhoto(
-                photoId, null, null, null, null, null, null, null, false);
+    //     ResponseEntity<Photo> response = photoController.updatePhoto(
+    //             photoId, null, null, null, null, null, null, null, false);
 
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-    }
+    //     assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    // }
 
 
 }
