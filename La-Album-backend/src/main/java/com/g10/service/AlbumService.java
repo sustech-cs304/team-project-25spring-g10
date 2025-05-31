@@ -31,6 +31,10 @@ public class AlbumService {
         return albumRepository.findByUserId(userId);
     }
 
+    public List<Album> getAllAlbumsByType(String typeName) {
+        return albumRepository.findByType(typeName);
+    }
+
     public Album createAlbum(Album album) {
         return albumRepository.save(album);
     }
@@ -82,6 +86,6 @@ public class AlbumService {
 
 
     public Album getDefaultAlbumForUser(Long userId) {
-        return albumRepository.findByUserIdAndTitle(userId, "Default Album");
+        return albumRepository.findByUserIdAndTitle(userId, "全部照片");
     }
 }

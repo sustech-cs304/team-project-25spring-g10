@@ -27,9 +27,29 @@ public class AlbumController {
     // 获取所有相册
     @GetMapping
     public Result<List<Album>> getAllAlbums() {
-        Map<String, Object> userInfo = ThreadLocalUtil.get();
-        Long userId = Long.valueOf(userInfo.get("id").toString());
-        List<Album> albums = albumService.getAllAlbumsByUserId(userId);
+        // Map<String, Object> userInfo = ThreadLocalUtil.get();
+        // Long userId = Long.valueOf(userInfo.get("id").toString());
+        // List<Album> albums = albumService.getAllAlbumsByUserId(userId);
+        List<Album> albums = albumService.getAllAlbumsByType("default");
+        
+        // 为每个相册中的每张照片添加签名URL
+        for (Album album : albums) {
+            if (album.getPhotos() != null) {
+                for (Photo photo : album.getPhotos()) {
+                    String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
+                    photo.setUrl(signedUrl);
+                }
+            }
+        }
+        return Result.success(albums);
+    }
+
+    @GetMapping("/type/{type}")
+    public Result<List<Album>> getAllAlbumsByType(@PathVariable String type) {
+        // Map<String, Object> userInfo = ThreadLocalUtil.get();
+        // Long userId = Long.valueOf(userInfo.get("id").toString());
+        // List<Album> albums = albumService.getAllAlbumsByUserId(userId);
+        List<Album> albums = albumService.getAllAlbumsByType(type);
         
         // 为每个相册中的每张照片添加签名URL
         for (Album album : albums) {
@@ -46,6 +66,26 @@ public class AlbumController {
     // 创建相册
     @PostMapping
     public Result<Album> createAlbum(@RequestBody Album album) {
+        // 从ThreadLocal中获取当前用户信息
+        Map<String, Object> userInfo = ThreadLocalUtil.get();
+        Long userId = Long.valueOf(userInfo.get("id").toString());
+        
+        // 获取用户实体
+        User user = userService.getUserById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // 设置相册所属用户
+        album.setUser(user);
+        album.setType("default");
+        
+        // 创建相册
+        Album created = albumService.createAlbum(album);
+        return Result.success(created);
+    }
+
+    //创建系统相册
+    @PostMapping("/type")
+    public Result<Album> createAlbumByType(@RequestBody Album album) {
         // 从ThreadLocal中获取当前用户信息
         Map<String, Object> userInfo = ThreadLocalUtil.get();
         Long userId = Long.valueOf(userInfo.get("id").toString());

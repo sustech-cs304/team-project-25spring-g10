@@ -29,6 +29,7 @@ public class Album {
     private String title;
     private String description;
     private LocalDateTime createTime;
+    private String type;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

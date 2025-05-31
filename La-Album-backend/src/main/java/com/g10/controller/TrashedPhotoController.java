@@ -18,7 +18,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TrashedPhotoController {
 
-    private final TrashedPhotoService trashedPhotoService;
+    @Autowired
+    private TrashedPhotoService trashedPhotoService;
 
     @Autowired
     private OssUtil ossUtil;

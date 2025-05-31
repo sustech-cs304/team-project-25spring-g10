@@ -21,6 +21,7 @@ public class TrashedPhoto {
     private String title;
     private String url;
     private String location;
+    private String description;
 
     // @ElementCollection
     // @CollectionTable(name = "trashed_photo_tags", joinColumns = @JoinColumn(name = "trashed_photo_id"))
@@ -28,6 +29,7 @@ public class TrashedPhoto {
     // @Cascade(CascadeType.REMOVE)
     private String tags;
 
+    private String date; // 拍摄日期
     private LocalDateTime uploadTime;
     private LocalDateTime deletedAt;
 
@@ -59,5 +61,7 @@ public class TrashedPhoto {
         this.user = photo.getAlbum().getUser();
         this.deletedAt = LocalDateTime.now();
         this.tags = photo.getTags();
+        this.date = photo.getDate();
+        this.description = photo.getDescription();
     }
 }

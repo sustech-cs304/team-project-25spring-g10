@@ -35,33 +35,30 @@ public class UserController {
 
     // 获取所有用户
     @GetMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    public Result<List<User>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        return Result.success(users);
     }
 
     // 根据ID查找用户
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
+    public Result<User> getUserById(@PathVariable Long id) {
         return userService.getUserById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
+                .map(Result::success)
+                .orElseGet(() -> Result.error("未找到ID为 " + id + " 的用户"));
     }
 
     // 根据用户名查找用户
     @GetMapping("/username/{username}")
-    public User getUserByUsername(@PathVariable String username) {
+    public Result<User> getUserByUsername(@PathVariable String username) {
         User user = userService.getUserByUsername(username);
         if (user == null) {
-            throw new RuntimeException("User not found with username: " + username);
+            return Result.error("未找到用户名为 " + username + " 的用户");
         }
-        return user;
+        return Result.success(user);
     }
 
-    // 创建新用户（原方法保留，但不用于注册）
-    @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        return new ResponseEntity<>(userService.createUser(user), HttpStatus.CREATED);
-    }
-    
+
     // 用户注册
     @PostMapping("/register")
     public Result register(
@@ -84,9 +81,10 @@ public class UserController {
         userService.createUser(newUser);
 
         Album defaultAlbum = new Album();
-        defaultAlbum.setTitle("Default Album");
+        defaultAlbum.setTitle("全部照片");
         defaultAlbum.setDescription("Default album for user");
         defaultAlbum.setUser(newUser);
+        defaultAlbum.setType("default");
         albumService.createAlbum(defaultAlbum);
 
         return Result.success();
@@ -103,6 +101,7 @@ public class UserController {
         
         // 判断用户是否存在
         if (loginUser == null) {
+            System.err.println("登录失败，用户名不存在: " + username);
             return Result.error("用户名错误");
         }
         
@@ -122,9 +121,10 @@ public class UserController {
             Album defaultAlbum = albumService.getDefaultAlbumForUser(loginUser.getId());
             if (defaultAlbum == null) {
                 Album newDefault = new Album();
-                newDefault.setTitle("Default Album");
+                newDefault.setTitle("全部照片");
                 newDefault.setDescription("系统默认相册");
                 newDefault.setUser(loginUser);
+                newDefault.setType("default");
                 albumService.createAlbum(newDefault);
             }
             return Result.success(token);
@@ -141,16 +141,6 @@ public class UserController {
         String username = (String) userInfo.get("username");
         User user = userService.getUserByUsername(username);
         return Result.success(user);
-    }
-
-    // 更新用户
-    @PutMapping("/{id}")
-    public User updateUser(@PathVariable Long id, @RequestBody User user) {
-        User updated = userService.updateUser(id, user);
-        if (updated == null) {
-            throw new RuntimeException("Cannot update, user not found with ID: " + id);
-        }
-        return updated;
     }
     
     // 更新用户信息（基于当前登录用户）
@@ -182,12 +172,12 @@ public class UserController {
 
     // 删除用户及其所有关联数据
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
+    public Result deleteUser(@PathVariable Long id) {
         boolean deleted = userService.deleteUser(id);
         if (!deleted) {
-            throw new RuntimeException("Failed to delete user with ID: " + id);
+            return Result.error("删除用户失败");
         }
-        return ResponseEntity.ok("User deleted successfully.");
+        return Result.success("用户删除成功");
     }
 
     // 用户登出

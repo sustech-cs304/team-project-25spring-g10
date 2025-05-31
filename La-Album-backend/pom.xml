@@ -47,6 +47,21 @@
       <version>1.4</version>
     </dependency>
 
+    <!-- Spring Boot 测试框架（包含 JUnit、Mockito、Spring Test 等） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- 可选：Mockito 独立依赖 -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>5.10.0</version>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
@@ -132,6 +147,31 @@
           <artifactId>spring-boot-starter-security</artifactId>
       </dependency> -->
 
-
   </dependencies>
+
+  <build>
+    <plugins>
+      <!-- JaCoCo 插件用于生成覆盖率报告 -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.10</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>

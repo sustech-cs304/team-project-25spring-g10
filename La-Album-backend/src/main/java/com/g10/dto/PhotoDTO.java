@@ -13,9 +13,14 @@ public class PhotoDTO {
     private String tags;
     private LocalDateTime uploadTime;
     private Long albumId;
+    private String date;
+    private String description;
+    private String albumTitle;
+
 
     public PhotoDTO(Long id, String title, String url, String location, String tags,
-                    LocalDateTime uploadTime, Long albumId) {
+                    LocalDateTime uploadTime, Long albumId, String date, String description,
+                    String albumTitle) {
         this.id = id;
         this.title = title;
         this.url = url;
@@ -23,5 +28,8 @@ public class PhotoDTO {
         this.tags = tags;
         this.uploadTime = uploadTime;
         this.albumId = albumId;
+        this.date = date;
+        this.description = description;
+        this.albumTitle = albumTitle;
     }
 }

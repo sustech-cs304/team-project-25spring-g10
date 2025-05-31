@@ -7,7 +7,7 @@
         <button 
           class="save-button" 
           @click="save"
-          :disabled="isSaving || !hasChanges"
+          :disabled="isSaving"
         >
           <span v-if="isSaving">保存中...</span>
           <span v-else>保存</span>
@@ -27,8 +27,9 @@
 
     <div v-else class="content">
       <div class="editor-section">
-        <image-editor
-          :image-url="photo.url"
+        <image-editor v-if="signedBlobUrl"
+          ref="editor"
+          :image-url="signedBlobUrl"
           :alt="photo.title"
           :initial-adjustments="initialAdjustments"
           @preview-updated="handlePreviewUpdate"
@@ -108,35 +109,10 @@
             </div>
           </div>
         </div>
-
-        <div v-if="photo.exif" class="exif-info">
-          <h3>EXIF 信息</h3>
-          <div class="exif-grid">
-            <div v-if="photo.exif.camera" class="exif-item">
-              <span class="label">相机</span>
-              <span class="value">{{ photo.exif.camera }}</span>
-            </div>
-            <div v-if="photo.exif.lens" class="exif-item">
-              <span class="label">镜头</span>
-              <span class="value">{{ photo.exif.lens }}</span>
-            </div>
-            <div v-if="photo.exif.focalLength" class="exif-item">
-              <span class="label">焦距</span>
-              <span class="value">{{ photo.exif.focalLength }}mm</span>
-            </div>
-            <div v-if="photo.exif.aperture" class="exif-item">
-              <span class="label">光圈</span>
-              <span class="value">f/{{ photo.exif.aperture }}</span>
-            </div>
-            <div v-if="photo.exif.shutterSpeed" class="exif-item">
-              <span class="label">快门</span>
-              <span class="value">{{ photo.exif.shutterSpeed }}s</span>
-            </div>
-            <div v-if="photo.exif.iso" class="exif-item">
-              <span class="label">ISO</span>
-              <span class="value">{{ photo.exif.iso }}</span>
-            </div>
-          </div>
+        <div class="advanced-actions">
+          <button class="style-transfer-button" @click="openStyleTransfer">
+            ✨ 风格迁移
+          </button>
         </div>
       </div>
     </div>
@@ -177,19 +153,10 @@ export default {
         rotation: 0,
         flipH: false,
         flipV: false
-      }
-    }
-  },
-  computed: {
-    hasChanges() {
-      return (
-        this.photo.title !== '' ||
-        this.photo.description !== '' ||
-        this.photo.date !== '' ||
-        this.photo.location !== '' ||
-        this.photo.albumId !== '' ||
-        this.photo.tags.length > 0
-      );
+      },
+      editedFile: null,
+      editedFilename: '',
+      signedBlobUrl: ''
     }
   },
   created() {
@@ -201,6 +168,19 @@ export default {
     this.loadData();
   },
   methods: {
+    async getProxiedBlobUrl(key) {
+      const token = localStorage.getItem('token');
+      const encodedKey = encodeURIComponent(key);
+      const res = await fetch(`/api/photos/proxy?key=${encodedKey}`, {
+        headers: {
+          'Authorization': `${token}`
+        }
+      });
+      if (!res.ok) throw new Error('图片代理失败');
+      const blob = await res.blob();
+      // console.log('👉 Blob 类型:', blob.type);
+      return URL.createObjectURL(blob); // ✔️ 本地可用 URL
+    },
     async loadData() {
       try {
         this.loading = true;
@@ -227,6 +207,11 @@ export default {
         if (!photoResponse.ok) throw new Error('加载照片失败');
         const photoData = await photoResponse.json();
         console.log('照片数据:', photoData);
+        // console.log(photoData.url);
+        const rawKey = photoData.url.split('.com/')[1].split('?')[0];
+        // console.log(rawKey);
+        this.signedBlobUrl = await this.getProxiedBlobUrl(rawKey);
+        console.log(this.signedBlobUrl);
         
         // 加载相册列表
         const albumsResponse = await fetch('/api/albums', {
@@ -247,16 +232,13 @@ export default {
         this.photo = {
           ...photoData,
           date: this.formatDate(photoData.date),
-          tags: photoData.tags || []
+          tags: photoData.tags || [],
         };
         
         // 确保 URL 是完整的
         if (this.photo.url && !this.photo.url.startsWith('http')) {
           this.photo.url = `/api${this.photo.url}`;
         }
-        
-        console.log('设置照片URL:', this.photo.url);
-        
         this.albums = albumsData;
       } catch (error) {
         console.error('加载数据失败:', error);
@@ -278,9 +260,16 @@ export default {
       console.log('收到预览图 URL:', url);
       this.previewUrl = url;
     },
-    handleSaveComplete(url) {
-      this.photo.url = url;
-      this.$emit('save-complete', url);
+    handleSaveComplete(data) {
+      if (typeof data === 'string') {
+        // 旧版本兼容，直接是URL
+        this.photo.url = data;
+      } else {
+        // 新版本，包含URL和文件对象
+        this.photo.url = data.url;
+        this.editedFile = data.file;
+        this.editedFilename = data.filename;
+      }
     },
     handleError(error) {
       console.error('编辑失败:', error);
@@ -302,34 +291,41 @@ export default {
     async save() {
       try {
         this.isSaving = true;
-        
         const formData = new FormData();
+        const editor = this.$refs.editor;
+        const { file, filename } = await editor.exportEditedImage();
+        if (!file) {
+          alert('未检测到编辑后的图像');
+          console.warn('[DEBUG] exportEditedImage 返回空 file');
+          return;
+        }
+        console.log('[DEBUG] file:', file);
+        console.log('[DEBUG] filename:', filename);
+        formData.append('file', file, filename); 
+        formData.append('albumId', this.photo.albumId);
         formData.append('title', this.photo.title);
         formData.append('description', this.photo.description);
-        formData.append('date', this.photo.date);
         formData.append('location', this.photo.location);
-        formData.append('albumId', this.photo.albumId);
+        formData.append('date', this.photo.date);
         formData.append('tags', JSON.stringify(this.photo.tags));
-        
-        // 如果有编辑后的图片，添加到表单
-        if (this.photo.url.startsWith('blob:')) {
-          const response = await fetch(this.photo.url);
-          const blob = await response.blob();
-          formData.append('image', blob, 'edited.jpg');
-        }
-        
-        const response = await fetch(`/api/photos/${this.photo.id}`, {
-          method: 'PUT',
+
+        const token = localStorage.getItem('token');
+        console.log('[DEBUG] 正在上传...');
+        const response = await fetch('/api/photos/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `${token}`,
+          },
           body: formData
         });
-        
-        if (!response.ok) throw new Error('保存失败');
-        
+
+        if (!response.ok) throw new Error('上传失败');
         const data = await response.json();
+        this.photo.url = data.url;  // 如果后端返回新图片地址
+        alert('保存成功！');
         this.$emit('save-complete', data);
-        this.$router.push(`/photos/${this.photo.id}`);
       } catch (error) {
-        console.error('保存失败:', error);
+        console.error('[DEBUG] 上传失败:', error);
         this.$emit('error', error);
       } finally {
         this.isSaving = false;
@@ -340,14 +336,19 @@ export default {
     },
     retry() {
       this.loadData();
+    },
+    openStyleTransfer() {
+    console.log('[点击风格迁移]', this.photo.id);
+    this.$router.push(`/style-transfer/${this.photo.id}`)
+    console.log('[点击风格迁移]', this.photo.id);
     }
-  }
+  },
+  
 }
 </script>
 
 <style scoped>
 .edit-photo {
-  padding: 20px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -459,12 +460,16 @@ export default {
 }
 
 .editor-section {
+  width:900px;
   background: white;
   border-radius: 8px;
   overflow: hidden;
+  flex: 1;
+  display: flex;
 }
 
 .info-section {
+  width:300px;
   background: white;
   border-radius: 8px;
   padding: 20px;
@@ -606,5 +611,35 @@ export default {
     grid-template-columns: 1fr;
   }
 }
+
+.advanced-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.style-transfer-button {
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #7e57c2, #ab47bc);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(171, 71, 188, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.style-transfer-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(171, 71, 188, 0.5);
+}
+
+.style-transfer-button:active {
+  transform: scale(0.98);
+}
+
+
 </style>
   

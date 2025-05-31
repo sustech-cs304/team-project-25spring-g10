@@ -17,7 +17,6 @@ public class UserService {
     private final UserRepository userRepository;
     private AlbumRepository albumRepository;
     private PhotoRepository photoRepository;
-    // private TrashBinRepository trashBinRepository;
     private TrashedPhotoRepository trashedPhotoRepository;
 
     @Autowired
