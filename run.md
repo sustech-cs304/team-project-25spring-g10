@@ -24,3 +24,10 @@
     INFO:     Waiting for application startup.
     INFO:     Application startup complete.
     ]
+
+ai
+- conda activate faceAI
+- cd flaskProject
+- python app.py
+
+cloc-2.04.exe . --exclude-dir=node_modules
