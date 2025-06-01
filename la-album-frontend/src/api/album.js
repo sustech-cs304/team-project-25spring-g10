@@ -12,6 +12,17 @@ export const fetchAlbumList = async () => {
   }
 };
 
+export const fetchAlbumByType= async (type) => {
+    try {
+      const response = await request.get(`/albums/type/${type}`);
+      // response已经被响应拦截器处理过，如果code === 0，则返回的是response.data
+      return response.data || []; // 如果data为空，返回空数组
+    } catch (error) {
+      console.error("获取相册列表失败:", error);
+      throw error;
+    }
+  };
+
 // 获取最近的相册（限制数量）
 export const fetchRecentAlbums = async (limit = 4) => {
   try {
@@ -54,6 +65,16 @@ export const createAlbum = async (albumData) => {
     throw error;
   }
 };
+//创建系统内部相册 人脸/类别
+export const createAlbumByType = async (albumData) => {
+    try {
+      const response = await request.post('/albums/type', albumData);
+      return response; // 返回完整响应
+    } catch (error) {
+      console.error("创建相册失败:", error);
+      throw error;
+    }
+  };
 
 // 更新相册
 export const updateAlbum = async (albumId, albumData) => {

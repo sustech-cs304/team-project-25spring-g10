@@ -77,11 +77,12 @@ public class PhotoController {
 
 
     @PostMapping("/upload")
-    public ResponseEntity<Photo> uploadPhoto(
+    public ResponseEntity<Long> uploadPhoto(
             @RequestParam("file") MultipartFile file,
             @RequestParam("albumId") Long albumId) {
         try {
             // 验证文件
+            System.out.println("start uploading");
             validateFile(file);
 
             // 检查 album 是否存在
@@ -98,22 +99,62 @@ public class PhotoController {
             System.out.println("即将上传到OSS的文件名：" + file.getOriginalFilename());
             // 上传到 OSS
             String url = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
-
+            System.out.println("即将上传到OSS的文件网址："+url);
             // 创建照片记录
             Photo photo = new Photo();
             photo.setTitle(file.getOriginalFilename());
             photo.setUrl(url);
             photo.setAlbum(album);
-
             // 保存到数据库
             Photo savedPhoto = photoService.savePhoto(photo);
-
-            return ResponseEntity.ok(savedPhoto);
+            return ResponseEntity.ok(savedPhoto.getId());
         } catch (Exception e) {
             System.out.println("Upload error: " + e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
+
+
+    @PostMapping("/copy")
+public ResponseEntity<Photo> copyPhotoToAlbum(
+        @RequestParam("photoId") Long photoId,
+        @RequestParam("newAlbumId") Long newAlbumId) {
+    try {
+        // 获取原照片
+        Optional<Photo> photoOptional = photoService.getPhotoEntityById(photoId);
+        if (photoOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Photo originalPhoto = photoOptional.get();
+
+        // 获取新相册
+        Album newAlbum = albumService.getAlbumById(newAlbumId);
+        if (newAlbum == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // 复制照片信息
+        Photo newPhoto = new Photo();
+        newPhoto.setTitle(originalPhoto.getTitle());
+        newPhoto.setDescription(originalPhoto.getDescription());
+        newPhoto.setDate(originalPhoto.getDate());
+        newPhoto.setLocation(originalPhoto.getLocation());
+        newPhoto.setTags(originalPhoto.getTags());
+        newPhoto.setUrl(originalPhoto.getUrl());
+        newPhoto.setAlbum(newAlbum);
+
+        // 复制其他需要的字段（如有）
+        newPhoto.setUploadTime(originalPhoto.getUploadTime());
+
+        // 保存新照片
+        Photo savedPhoto = photoService.savePhoto(newPhoto);
+
+        return ResponseEntity.ok(savedPhoto);
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+}
 
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -177,98 +218,131 @@ public class PhotoController {
 
 
     // 更新照片信息和图片
-    @PutMapping("/{id}")
-    public ResponseEntity<Photo> updatePhoto(
-            @PathVariable Long id,
-            @RequestParam(value = "image", required = false) MultipartFile file,
-            @RequestParam(value = "title", required = false) String title,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam(value = "date", required = false) String date,
-            @RequestParam(value = "location", required = false) String location,
-            @RequestParam(value = "albumId", required = false) Long albumId,
-            @RequestParam(value = "tags", required = false) String tagsJson,
-            @RequestParam(value = "saveAsNew", required = false, defaultValue = "false") Boolean saveAsNew) {
+    // @PutMapping("/{id}")
+    // public ResponseEntity<Photo> updatePhoto(
+    //         @PathVariable Long id,
+    //         @RequestParam(value = "image", required = false) MultipartFile file,
+    //         @RequestParam(value = "title", required = false) String title,
+    //         @RequestParam(value = "description", required = false) String description,
+    //         @RequestParam(value = "date", required = false) String date,
+    //         @RequestParam(value = "location", required = false) String location,
+    //         @RequestParam(value = "albumId", required = false) Long albumId,
+    //         @RequestParam(value = "tags", required = false) String tagsJson,
+    //         @RequestParam(value = "saveAsNew", required = false, defaultValue = "false") Boolean saveAsNew) {
 
+    //     try {
+    //         // 获取照片
+    //         Optional<Photo> photoOptional = photoService.getPhotoEntityById(id);
+    //         if (photoOptional.isEmpty()) {
+    //             return ResponseEntity.notFound().build();
+    //         }
+            
+    //         Photo photo = photoOptional.get();
+    //         Photo updatedPhoto;
+
+    //         // 如果要另存为新文件
+    //         if (saveAsNew && file != null && !file.isEmpty()) {
+    //             // 创建新照片对象
+    //             updatedPhoto = new Photo();
+    //             updatedPhoto.setTitle(title != null ? title : photo.getTitle());
+    //             updatedPhoto.setTags(photo.getTags());
+    //             updatedPhoto.setDate(date != null ? date : photo.getDate());
+    //             updatedPhoto.setLocation(location != null ? location : photo.getLocation());
+    //             updatedPhoto.setDescription(description);
+
+    //             // 设置相册
+    //             if (albumId != null) {
+    //                 Album album = albumService.getAlbumById(albumId);
+    //                 if (album != null) {
+    //                     updatedPhoto.setAlbum(album);
+    //                 } else {
+    //                     updatedPhoto.setAlbum(photo.getAlbum());
+    //                 }
+    //             } else {
+    //                 updatedPhoto.setAlbum(photo.getAlbum());
+    //             }
+
+    //             // 生成新的文件名，保留原文件扩展名
+    //             String originalFilename = file.getOriginalFilename();
+    //             String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+    //             String newFilename = originalFilename.substring(0, originalFilename.lastIndexOf("."))
+    //                 + "_edited_" + System.currentTimeMillis() + fileExtension;
+
+    //             // 上传新文件
+    //             String url = ossUtil.uploadFile(newFilename, file.getInputStream());
+    //             updatedPhoto.setUrl(url);
+
+    //             // 保存新照片
+    //             updatedPhoto = photoService.savePhoto(updatedPhoto);
+    //         } else {
+    //             // 更新现有照片
+    //             if (title != null) photo.setTitle(title);
+    //             if (description != null) photo.setDescription(description);
+    //             if (date != null) photo.setDate(date);
+    //             if (location != null) photo.setLocation(location);
+
+    //             // 更新相册
+    //             if (albumId != null) {
+    //                 Album album = albumService.getAlbumById(albumId);
+    //                 if (album != null) {
+    //                     photo.setAlbum(album);
+    //                 }
+    //             }
+
+    //             // 更新图片
+    //             if (file != null && !file.isEmpty()) {
+    //                 validateFile(file);
+    //                 String url = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
+    //                 photo.setUrl(url);
+    //             }
+
+    //             // 保存更新
+    //             updatedPhoto = photoService.savePhoto(photo);
+    //         }
+
+    //         // 生成签名URL
+    //         String signedUrl = ossUtil.generateSignedUrl(updatedPhoto.getUrl());
+    //         updatedPhoto.setUrl(signedUrl);
+
+    //         return ResponseEntity.ok(updatedPhoto);
+
+    //     } catch (Exception e) {
+    //         System.out.println("更新照片失败: " + e.getMessage());
+    //         e.printStackTrace();
+    //         return ResponseEntity.badRequest().build();
+    //     }
+    // }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Photo> updatePhotoDescriptionAndTags(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> updates) {
+        
         try {
-            // 获取照片
+            // 获取要更新的照片
             Optional<Photo> photoOptional = photoService.getPhotoEntityById(id);
             if (photoOptional.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-
+            
             Photo photo = photoOptional.get();
-            Photo updatedPhoto;
-
-            // 如果要另存为新文件
-            if (saveAsNew && file != null && !file.isEmpty()) {
-                // 创建新照片对象
-                updatedPhoto = new Photo();
-                updatedPhoto.setTitle(title != null ? title : photo.getTitle());
-                updatedPhoto.setTags(photo.getTags());
-                updatedPhoto.setDate(date != null ? date : photo.getDate());
-                updatedPhoto.setLocation(location != null ? location : photo.getLocation());
-                updatedPhoto.setDescription(description);
-
-                // 设置相册
-                if (albumId != null) {
-                    Album album = albumService.getAlbumById(albumId);
-                    if (album != null) {
-                        updatedPhoto.setAlbum(album);
-                    } else {
-                        updatedPhoto.setAlbum(photo.getAlbum());
-                    }
-                } else {
-                    updatedPhoto.setAlbum(photo.getAlbum());
-                }
-
-                // 生成新的文件名，保留原文件扩展名
-                String originalFilename = file.getOriginalFilename();
-                String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
-                String newFilename = originalFilename.substring(0, originalFilename.lastIndexOf("."))
-                    + "_edited_" + System.currentTimeMillis() + fileExtension;
-
-                // 上传新文件
-                String url = ossUtil.uploadFile(newFilename, file.getInputStream());
-                updatedPhoto.setUrl(url);
-
-                // 保存新照片
-                updatedPhoto = photoService.savePhoto(updatedPhoto);
-            } else {
-                // 更新现有照片
-                if (title != null) photo.setTitle(title);
-                if (description != null) photo.setDescription(description);
-                if (date != null) photo.setDate(date);
-                if (location != null) photo.setLocation(location);
-
-                // 更新相册
-                if (albumId != null) {
-                    Album album = albumService.getAlbumById(albumId);
-                    if (album != null) {
-                        photo.setAlbum(album);
-                    }
-                }
-
-                // 更新图片
-                if (file != null && !file.isEmpty()) {
-                    validateFile(file);
-                    String url = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
-                    photo.setUrl(url);
-                }
-
-                // 保存更新
-                updatedPhoto = photoService.savePhoto(photo);
+            
+            // 只更新 description 和 tags (如果提供了)
+            if (updates.containsKey("description")) {
+                photo.setDescription(updates.get("description"));
             }
-
-            // 生成签名URL
-            String signedUrl = ossUtil.generateSignedUrl(updatedPhoto.getUrl());
-            updatedPhoto.setUrl(signedUrl);
-
+            
+            if (updates.containsKey("tags")) {
+                photo.setTags(updates.get("tags"));
+            }
+            
+            // 保存更新后的照片
+            Photo updatedPhoto = photoService.savePhoto(photo);
+            
             return ResponseEntity.ok(updatedPhoto);
-
         } catch (Exception e) {
-            System.out.println("更新照片失败: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

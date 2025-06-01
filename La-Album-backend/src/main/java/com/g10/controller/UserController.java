@@ -81,9 +81,10 @@ public class UserController {
         userService.createUser(newUser);
 
         Album defaultAlbum = new Album();
-        defaultAlbum.setTitle("Default Album");
+        defaultAlbum.setTitle("全部照片");
         defaultAlbum.setDescription("Default album for user");
         defaultAlbum.setUser(newUser);
+        defaultAlbum.setType("default");
         albumService.createAlbum(defaultAlbum);
 
         return Result.success();
@@ -100,6 +101,7 @@ public class UserController {
         
         // 判断用户是否存在
         if (loginUser == null) {
+            System.err.println("登录失败，用户名不存在: " + username);
             return Result.error("用户名错误");
         }
         
@@ -119,9 +121,10 @@ public class UserController {
             Album defaultAlbum = albumService.getDefaultAlbumForUser(loginUser.getId());
             if (defaultAlbum == null) {
                 Album newDefault = new Album();
-                newDefault.setTitle("Default Album");
+                newDefault.setTitle("全部照片");
                 newDefault.setDescription("系统默认相册");
                 newDefault.setUser(loginUser);
+                newDefault.setType("default");
                 albumService.createAlbum(newDefault);
             }
             return Result.success(token);
