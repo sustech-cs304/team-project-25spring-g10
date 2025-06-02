@@ -152,6 +152,11 @@ watch(() => route.query, () => {
   }
 });
 
+function getDefaultAlbumId(albums) {
+    const album = albums.value.find(a => a.title === '全部照片');
+    return album ? album.id : null;
+  }
+
 const searchPhotos = async () => {
   if (!searchQuery.value && !startDate.value && !endDate.value && !selectedAlbum.value) {
     return;
@@ -161,12 +166,15 @@ const searchPhotos = async () => {
   searchPerformed.value = true;
 
   try {
+    const defaultAlbumId = getDefaultAlbumId(albums);
     const params = {};
-
+    
     if (searchQuery.value) params.q = searchQuery.value;
     if (startDate.value) params.startDate = startDate.value;
     if (endDate.value) params.endDate = endDate.value;
     if (selectedAlbum.value) params.albumId = selectedAlbum.value;
+    //TODO：现在只在全部照片中搜索，可根据需求修改
+    params.albumId = defaultAlbumId;
 
     const response = await request.get('/photos/search', { params });
     console.log("search response: ", response);

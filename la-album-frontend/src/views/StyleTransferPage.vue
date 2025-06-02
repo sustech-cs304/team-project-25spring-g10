@@ -44,7 +44,7 @@
       <div class="result-actions">
         <button 
           class="save-button" 
-          @click="saveToOss" 
+          @click="save" 
           :disabled="!resultUrl"
         >
           💾 保存
@@ -55,6 +55,8 @@
   </template>
   
   <script>
+  import { copyPhotoToAlbum} from '@/api/photo';
+  import {fetchAlbumByTitle} from '@/api/album';
   export default {
     data() {
       return {
@@ -65,7 +67,7 @@
         isLoading: false,
         styleImages: [],          
         selectedStyleFromServer: '', 
-
+        albums: []
       };
     },
     async created() {
@@ -93,7 +95,16 @@
       } catch (e) {
         console.error('[StyleTransferPage] 拉取 style-images 失败:', e);
       }
-      
+      const albumsRes = await fetch('/api/albums', {
+        method: 'GET',
+        headers: {
+          'Authorization': `${token}`
+        }
+      });
+      if (albumsRes.ok) {
+        const albumsData = await albumsRes.json();
+        this.albums = albumsData; // ✅ 赋值 albums
+      }
     },
     methods: {
       selectServerStyle(filename) {
@@ -129,33 +140,105 @@
         this.resultUrl = URL.createObjectURL(resultBlob);
         this.isLoading = false;
       },
-      async saveToOss() {
-        if (!this.resultUrl) return;
-
-        const blob = await fetch(this.resultUrl).then(r => r.blob());
-        const formData = new FormData();
-        formData.append('image', blob, 'stylized.jpg');
-        formData.append('title', '风格迁移结果');
-        formData.append('description', '由风格迁移生成'); 
-        formData.append('tags', JSON.stringify(['风格迁移']));
-        formData.append('saveAsNew', 'true');
-
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/photos', {
-          method: 'POST',
-          headers: {
-            Authorization: token
-          },
-          body: formData
-        });
-
-        if (response.ok) {
-          alert('保存成功！');
-        } else {
-          alert('保存失败');
+      async getDefaultAlbumId() {
+        try {
+            // 将类似对象的 JSON 转换为真正的数组
+            const albumsArray = Object.values(this.albums.data);
+            console.log('获取的相册数据:',albumsArray);
+            // 在数组中查找 title 为"全部照片"的相册
+            const defaultAlbum = albumsArray.find(album => album.title === '全部照片');
+            
+            // 如果找到则返回 ID，否则返回 null
+            return defaultAlbum ? defaultAlbum.id : null;
+        } catch (error) {
+            console.error('获取默认相册ID失败:', error);
+            return null;
         }
       },
+      async save() {
+        try {
+          if (!this.resultUrl) {
+            alert('没有可保存的图像');
+            console.warn('[DEBUG] resultUrl is empty');
+            return;
+          }
 
+          this.isSaving = true;
+
+          console.log('[DEBUG] Fetching resultUrl blob...');
+          const response = await fetch(this.resultUrl);
+          const blob = await response.blob();
+          console.log('[DEBUG] Blob fetched, size:', blob.size);
+
+          const file = new File([blob], 'styled-image.jpg', { type: 'image/jpeg' });
+          console.log('[DEBUG] Created File object:', file);
+
+          const formData = new FormData();
+          formData.append('file', file, file.name);
+
+          // 日志打印字段值
+          const albumId = this.$route.query.albumId || '';
+          const title = this.$route.query.title || '';
+          const description = this.$route.query.description || '';
+          const location = this.$route.query.location || '';
+          const date = this.$route.query.date || '';
+          const tags = this.$route.query.tags || '[]';
+
+          console.log('[DEBUG] Metadata:', {
+            albumId, title, description, location, date, tags
+          });
+
+          formData.append('albumId', albumId);
+          formData.append('title', title);
+          formData.append('description', description);
+          formData.append('location', location);
+          formData.append('date', date);
+          formData.append('tags', tags);
+
+          const token = localStorage.getItem('token');
+          console.log('[DEBUG] Sending upload request with token:', token?.slice(0, 10) + '...');
+
+          const uploadRes = await fetch('/api/photos/upload', {
+            method: 'POST',
+            headers: {
+              Authorization: `${token}`,
+            },
+            body: formData
+          });
+
+          alert('保存成功！');
+          // 1. 从服务器响应中提取 photoID
+          const photoID = await uploadRes.json();
+
+          // 2. 获取默认相册ID
+          const defaultAlbumId = this.getDefaultAlbumId();
+
+          // 3. 若不是上传到默认相册，则复制
+          if (albumId !== defaultAlbumId) {
+            await copyPhotoToAlbum(photoID, defaultAlbumId);
+          }
+
+          // 4. 分类照片至 “编辑” 相册
+          const responseType = await fetchAlbumByTitle('编辑');
+
+          if (responseType.length === 0) {
+            console.log('没有找到相关类型的相册', this.albums);
+            const newAlbumID = await this.createAlbumByType('auto', '编辑');
+            await copyPhotoToAlbum(photoID, newAlbumID);
+          } else {
+            console.log('找到相册:', responseType);
+            const editAlbumId = responseType[0].id;
+            await copyPhotoToAlbum(photoID, editAlbumId);
+          }
+
+          this.$emit('save-complete', photoID);
+        } catch (error) {
+          console.error('[DEBUG] 上传失败:', error);
+          this.$emit('error', error);
+        } finally {
+          this.isSaving = false;
+        }
+      },
       goBack() {
         this.$router.back();
       }

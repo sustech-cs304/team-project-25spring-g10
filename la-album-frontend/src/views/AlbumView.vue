@@ -33,7 +33,7 @@
                 上传照片
               </button>
               
-              <button class="btn btn-secondary" @click="editAlbum">
+              <button class="btn" @click="editAlbum">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 20h9"></path>
                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
@@ -90,14 +90,48 @@
       </div>
     </div>
   </div>
+
+  <el-dialog
+    v-model="showEditDialog"
+    title="编辑相册"
+    width="500px"
+    :close-on-click-modal="false"
+  >
+    <el-form :model="editingAlbum" label-width="80px">
+      <el-form-item label="名称" required>
+        <el-input v-model="editingAlbum.title" placeholder="请输入相册名称" />
+      </el-form-item>
+      <el-form-item label="描述">
+        <el-input
+          v-model="editingAlbum.description"
+          type="textarea"
+          rows="4"
+          placeholder="请输入相册描述"
+        />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="cancelEdit">取消</el-button>
+        <el-button 
+          type="primary" 
+          @click="saveAlbumChanges"
+          :loading="isSubmitting"
+        >
+          保存
+        </el-button>
+      </span>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import PhotoThumbnail from '@/components/photo/PhotoThumbnail.vue';
-import { fetchAlbumById } from '@/api/album';
-import { ElMessage } from 'element-plus';
+import { fetchAlbumById,updateAlbum } from '@/api/album';
+import { ElMessage} from 'element-plus';
+
 
 const route = useRoute();
 const router = useRouter();
@@ -105,6 +139,12 @@ const loading = ref(true);
 const album = ref(null);
 const selectionMode = ref(false);
 const selectedPhotos = ref([]);
+const showEditDialog = ref(false);
+const editingAlbum = ref({
+  title: '',
+  description: ''
+});
+const isSubmitting = ref(false);
 
 // 获取相册数据
 onMounted(async () => {
@@ -181,8 +221,56 @@ const viewPhoto = (photo) => {
 
 // 编辑相册
 const editAlbum = () => {
-  // 编辑相册的逻辑
-  console.log('编辑相册', album.value.id);
+  // 初始化编辑表单数据
+  editingAlbum.value = {
+    title: album.value.title,
+    description: album.value.description || ''
+  };
+  
+  // 显示编辑对话框
+  showEditDialog.value = true;
+};
+
+// 保存相册信息
+const saveAlbumChanges = async () => {
+  if (!editingAlbum.value.title.trim()) {
+    ElMessage.warning('相册名称不能为空');
+    return;
+  }
+  
+  try {
+    isSubmitting.value = true;
+    
+    // 调用API更新相册
+    const response = await updateAlbum(album.value.id, {
+      title: editingAlbum.value.title,
+      description: editingAlbum.value.description
+    });
+    
+    if (response && response.code === 0) {
+      // 更新本地数据
+      album.value.title = editingAlbum.value.title;
+      album.value.description = editingAlbum.value.description;
+      
+      // 关闭对话框
+      showEditDialog.value = false;
+      
+      // 显示成功消息
+      ElMessage.success('相册更新成功');
+    } else {
+      ElMessage.error(`更新失败: ${response?.message || '未知错误'}`);
+    }
+  } catch (error) {
+    console.error('更新相册失败:', error);
+    ElMessage.error('更新相册时发生错误，请稍后重试');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+// 取消编辑
+const cancelEdit = () => {
+  showEditDialog.value = false;
 };
 
 // 上传照片

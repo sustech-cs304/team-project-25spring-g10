@@ -50,19 +50,6 @@
                 </select>
               </div>
               
-              <div class="option-group">
-                <label>访问权限</label>
-                <div class="radio-group">
-                  <label class="radio-option">
-                    <input type="radio" v-model="shareSettings.accessType" value="public">
-                    <span>公开（任何人都可查看）</span>
-                  </label>
-                  <label class="radio-option">
-                    <input type="radio" v-model="shareSettings.accessType" value="restricted">
-                    <span>限制（需要密码访问）</span>
-                  </label>
-                </div>
-              </div>
               
               <div class="option-group" v-if="shareSettings.accessType === 'restricted'">
                 <label>访问密码</label>
@@ -107,21 +94,6 @@
                 </button>
               </div>
               
-              <div class="qr-code-container">
-                <div class="qr-code">
-                  <!-- 模拟二维码图像 -->
-                  <div class="mock-qr-code"></div>
-                  <!-- 实际项目中可以使用二维码生成库，如 qrcode.vue -->
-                </div>
-                <button class="btn btn-secondary download-qr-btn">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                  </svg>
-                  下载二维码
-                </button>
-              </div>
               
               <div class="share-info">
                 <div class="info-item">
@@ -134,32 +106,7 @@
                 </div>
               </div>
               
-              <div class="share-social">
-                <h4>分享到社交媒体</h4>
-                <div class="social-buttons">
-                  <button class="social-btn wechat">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M9 12C9 12 9 9 12 9C15 9 15 12 15 12C15 15 12 15 9 15"></path>
-                    </svg>
-                    微信
-                  </button>
-                  <button class="social-btn weibo">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                    </svg>
-                    微博
-                  </button>
-                  <button class="social-btn qq">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="2" y1="12" x2="22" y2="12"></line>
-                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                    </svg>
-                    QQ
-                  </button>
-                </div>
-              </div>
+             
             </div>
           </div>
         </template>
@@ -171,6 +118,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { getPhotoById} from '@/api/photo';
 
 const router = useRouter();
 const route = useRoute();
@@ -241,27 +189,36 @@ const generateShareLink = async () => {
   
   isGenerating.value = true;
   
-  // 模拟API调用
-  setTimeout(() => {
-    // 创建带有查询参数的链接
-    const baseUrl = window.location.origin;
-    const params = new URLSearchParams();
-    params.append('photoId', photo.value.id);
-    params.append('token', generateRandomToken());
+  try {
+    // 获取照片详情
+    const url = await getPhotoById(photo.value.id);
     
-    if (shareSettings.value.accessType === 'restricted') {
-      params.append('protected', 'true');
+    // 假设 photoDetail 包含照片的完整信息，包括 URL
+    if (url) {
+      // 构建分享链接
+      shareLink.value = url;
+      
+      console.log('生成的分享链接:', shareLink.value);
+    } else {
+      console.error('获取照片详情失败');
     }
-    
-    shareLink.value = `${baseUrl}/share-view?${params.toString()}`;
+  } catch (error) {
+    console.error('生成分享链接出错:', error);
+  } finally {
     isGenerating.value = false;
-  }, 1500);
+  }
 };
 
+// // 生成随机token用于分享链接的安全验证
+// const generateRandomToken = () => {
+//   return Math.random().toString(36).substring(2, 15) + 
+//          Math.random().toString(36).substring(2, 15);
+// };
+
 // 生成随机令牌
-const generateRandomToken = () => {
-  return Math.random().toString(36).substr(2, 10);
-};
+// const generateRandomToken = () => {
+//   return Math.random().toString(36).substr(2, 10);
+// };
 
 // 复制分享链接
 const copyShareLink = () => {

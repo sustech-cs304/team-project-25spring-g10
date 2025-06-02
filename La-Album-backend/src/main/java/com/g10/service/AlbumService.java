@@ -37,6 +37,10 @@ public class AlbumService {
         return albumRepository.findByType(typeName);
     }
 
+    public List<Album> getAllAlbumsByTitle(String titleName) {
+        return albumRepository.findByTitle(titleName);
+    }
+
     public Album createAlbum(Album album) {
         return albumRepository.save(album);
     }

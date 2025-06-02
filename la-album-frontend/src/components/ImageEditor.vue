@@ -667,6 +667,11 @@ export default {
 
       const croppedDataUrl = offCanvas.toDataURL('image/jpeg', 0.92);
 
+      const extraObjects = this.canvas.getObjects().filter(obj =>
+        obj.name !== 'baseImage' &&
+        obj.name !== 'cropRect' &&
+        !obj.name?.startsWith('cropMaskPart')
+      );
       // 裁剪后不改变 canvas 尺寸，而是让图适应 canvas 容器
       fabric.Image.fromURL(croppedDataUrl, (croppedImg) => {
         const canvasEl = this.$refs.canvas;
@@ -697,6 +702,31 @@ export default {
 
         this.canvas.add(croppedImg);
         this.canvas.sendToBack(croppedImg);
+        extraObjects.forEach(obj => {
+          const centerX = obj.left + (obj.width * obj.scaleX) / 2;
+          const centerY = obj.top + (obj.height * obj.scaleY) / 2;
+
+          // 判断是否在裁剪区域内
+          if (
+            centerX >= cropRect.left &&
+            centerX <= cropRect.left + cropRect.width * cropRect.scaleX &&
+            centerY >= cropRect.top &&
+            centerY <= cropRect.top + cropRect.height * cropRect.scaleY
+          ) {
+            const clone = fabric.util.object.clone(obj);
+
+            // 重新计算新位置（相对于裁剪区域左上角）
+            const offsetLeft = (centerX - cropRect.left) / baseScale;
+            const offsetTop = (centerY - cropRect.top) / baseScale;
+
+            clone.left = croppedImg.left + offsetLeft * scale;
+            clone.top = croppedImg.top + offsetTop * scale;
+            clone.scaleX = obj.scaleX * scale;
+            clone.scaleY = obj.scaleY * scale;
+
+            this.canvas.add(clone);
+          }
+        });
         this.canvas.renderAll();
       }, { crossOrigin: 'anonymous' });
 

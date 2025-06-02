@@ -23,6 +23,17 @@ export const fetchAlbumByType= async (type) => {
     }
   };
 
+  export const fetchAlbumByTitle= async (title) => {
+    try {
+      const response = await request.get(`/albums/title/${title}`);
+      // response已经被响应拦截器处理过，如果code === 0，则返回的是response.data
+      return response.data || []; // 如果data为空，返回空数组
+    } catch (error) {
+      console.error("获取相册列表失败:", error);
+      throw error;
+    }
+  };
+
 // 获取最近的相册（限制数量）
 export const fetchRecentAlbums = async (limit = 4) => {
   try {

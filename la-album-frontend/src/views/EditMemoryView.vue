@@ -261,13 +261,16 @@ const loadMemory = async () => {
       bgmId: response.bgmId,
       transition: response.transition,
       photos: response.photos ? response.photos.map(photo => ({
-        ...photo,
-        included: true,
-        displayDuration: photo.displayDuration // 使用原始时长，不设置默认值
+        // 统一使用id字段，处理后端可能返回photoId的情况
+        id: photo.id || photo.photoId,
+        thumbnailUrl: photo.thumbnailUrl,
+        displayDuration: photo.displayDuration || 5, // 如果没有时长，设置默认值
+        included: true
       })) : []
     };
     
     console.log('加载的记忆视频数据:', editedMemory.value);
+    console.log('照片数据:', editedMemory.value.photos);
     
     // 保存原始照片顺序，用于重置
     originalPhotos.value = JSON.parse(JSON.stringify(editedMemory.value.photos));
@@ -292,21 +295,37 @@ const saveChanges = async () => {
   
   isSaving.value = true;
   try {
+    // 过滤出包含的照片，并确保它们都有有效的ID
+    const includedPhotos = editedMemory.value.photos.filter(photo => {
+      if (!photo.included) return false;
+      if (!photo.id && !photo.photoId) {
+        console.warn('发现没有ID的照片:', photo);
+        return false;
+      }
+      return true;
+    });
+    
     // 准备提交数据
     const memoryData = {
       title: editedMemory.value.title,
-      bgmId: editedMemory.value.bgmId,
+      bgmId: parseInt(editedMemory.value.bgmId) || 1, // 确保是数字类型
       transition: editedMemory.value.transition,
-      photoIds: editedMemory.value.photos
-        .filter(photo => photo.included)
-        .map(photo => photo.id),
+      photoIds: includedPhotos.map(photo => {
+        const photoId = photo.id || photo.photoId;
+        return photoId.toString();
+      }),
       photoDisplayDurations: {}
     };
     
-    // 填充照片时长信息
-    editedMemory.value.photos.forEach(photo => {
-      memoryData.photoDisplayDurations[photo.id] = photo.displayDuration || 5;
+    // 填充照片时长信息，确保数据类型正确
+    includedPhotos.forEach(photo => {
+      // 确保photo.id是字符串，displayDuration是数字
+      const photoId = (photo.id || photo.photoId).toString();
+      const duration = parseInt(photo.displayDuration) || 5;
+      memoryData.photoDisplayDurations[photoId] = duration;
     });
+    
+    console.log('提交的数据:', memoryData);
     
     // 提交更新
     await updateMemory(route.params.id, memoryData);
@@ -539,12 +558,15 @@ watch(() => editedMemory.value.photos, () => {
 // 更新特定照片的显示时长
 const updatePhotoDuration = (photo, event) => {
   const value = parseInt(event.target.value);
-  if (!isNaN(value)) {
-    // 确保值在1-60之间
+  if (!isNaN(value) && value > 0) {
+    // 确保值在1-60之间，并且是数字类型
     photo.displayDuration = Math.max(1, Math.min(60, value));
     console.log(`更新照片 ${photo.id} 的时长为 ${photo.displayDuration}秒`);
+  } else {
+    // 如果输入无效，重置为默认值5秒
+    photo.displayDuration = 5;
+    event.target.value = 5;
   }
-  // 如果无效，保留原值，不修改
 };
 
 onMounted(() => {

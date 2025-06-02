@@ -7,7 +7,8 @@ const BASE_URL = "http://localhost:9090/api/photos";
 export const getPhotoById = async (id) => {
   try {
     const response = await request.get(`${BASE_URL}/${id}`);
-    return response.data;
+    console.log("获取照片成功:", response);
+    return response.url;
   } catch (error) {
     console.error("Error fetching photo:", error);
     throw error;

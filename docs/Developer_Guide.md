@@ -1,4 +1,5 @@
 # La-Album 开发者文档
+# La-Album 开发者文档
 
 ## 1. 系统架构
 
@@ -44,16 +45,19 @@
 
 ### 2.0.2 JWT拦截器权限说明
 所有需要认证的接口都需要在请求头中携带JWT token，格式为：
+
 ```
 Authorization: Bearer {token}
 ```
 
 JWT token包含以下信息：
+
 - 用户ID
 - 用户名
 - 过期时间（默认24小时）
 
 权限验证规则：
+
 1. 所有以 `/api` 开头的接口都需要进行JWT验证
 2. 以下接口除外（无需验证）：
    - `/api/users/register`
@@ -301,6 +305,7 @@ public class TrashedPhoto {
 ## 3. 前端视图和组件说明
 
 ### 3.1 视图（Views）
+### 3.1 视图（Views）
 
 #### 3.1.1 用户认证相关
 - **LoginView.vue**: 用户登录页面
@@ -335,6 +340,7 @@ public class TrashedPhoto {
   - 路由：`/upload`
   - 依赖组件：`upload/UploadForm.vue`, `ImageEditor.vue`
 
+### 3.2 组件（Components）
 ### 3.2 组件（Components）
 
 #### 3.2.1 布局组件（layout/）
