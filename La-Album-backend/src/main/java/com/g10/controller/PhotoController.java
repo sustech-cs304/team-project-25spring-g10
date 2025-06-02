@@ -103,6 +103,9 @@ public class PhotoController {
             photo.setTitle(file.getOriginalFilename());
             photo.setUrl(url);
             photo.setAlbum(album);
+            photo.setLocation("Shenzhen");
+            String currentDate = LocalDate.now().toString();
+            photo.setDate(currentDate);
             // 保存到数据库
             Photo savedPhoto = photoService.savePhoto(photo);
             return ResponseEntity.ok(savedPhoto.getId());
