@@ -291,19 +291,19 @@ export default {
     },
       //获取全部照片的id
       getDefaultAlbumId() {
-    try {
-        // 将类似对象的 JSON 转换为真正的数组
-        const albumsArray = Object.values(this.albums.data);
-        console.log('获取的相册数据:',albumsArray);
-        // 在数组中查找 title 为"全部照片"的相册
-        const defaultAlbum = albumsArray.find(album => album.title === '全部照片');
-        
-        // 如果找到则返回 ID，否则返回 null
-        return defaultAlbum ? defaultAlbum.id : null;
-    } catch (error) {
-        console.error('获取默认相册ID失败:', error);
-        return null;
-    }
+        try {
+            // 将类似对象的 JSON 转换为真正的数组
+            const albumsArray = Object.values(this.albums.data);
+            console.log('获取的相册数据:',albumsArray);
+            // 在数组中查找 title 为"全部照片"的相册
+            const defaultAlbum = albumsArray.find(album => album.title === '全部照片');
+            
+            // 如果找到则返回 ID，否则返回 null
+            return defaultAlbum ? defaultAlbum.id : null;
+        } catch (error) {
+            console.error('获取默认相册ID失败:', error);
+            return null;
+        }
     },
     async createAlbumByType(type,name){
 
