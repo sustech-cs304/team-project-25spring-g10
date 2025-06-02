@@ -1,4 +1,3 @@
-
 启动 Redis 服务端程序 redis-server.exe redis.conf
 
 修改数据库配置
@@ -10,6 +9,15 @@
 前端
 - cd *tend
 - pnpm run serve
+
+前端测试环境搭建
+- cd *tend
+- pnpm install @vue/test-utils@next --save-dev  # 安装 Vue Test Utils
+- pnpm install jest@latest @babel/preset-env@latest babel-jest@latest --save-dev  # 安装 Jest 和相关依赖
+- pnpm install @vue/vue3-jest@latest --save-dev  # 安装 Vue 3 Jest 支持
+- pnpm install @babel/core@latest --save-dev  # 安装 Babel 核心
+- 在 package.json 中添加测试脚本:
+- 运行测试并生成覆盖率报告: npm run test:coverage   
 
 风格迁移 pytorch-neural-style-transfer
 - cd pytorch-neural-style-transfer

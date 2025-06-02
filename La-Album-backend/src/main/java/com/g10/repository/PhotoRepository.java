@@ -18,7 +18,8 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     // 根据地点搜索照片
     List<Photo> findByLocation(String location);
 
-    List<Photo> findByAlbumId(Long albumId);
+    List<Photo> findByAlbum_Id(Long albumId);
+
 
     @Query("SELECT p FROM Photo p WHERE " +
             "(:q IS NULL OR p.title LIKE %:q% OR p.tags LIKE %:q%) AND " +

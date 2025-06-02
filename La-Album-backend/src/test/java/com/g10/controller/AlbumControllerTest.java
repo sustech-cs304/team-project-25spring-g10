@@ -1,5 +1,6 @@
 package com.g10.controller;
 
+import com.g10.dto.PhotoDTO;
 import com.g10.model.Album;
 import com.g10.model.Photo;
 import com.g10.model.Result;
@@ -8,7 +9,9 @@ import com.g10.service.AlbumService;
 import com.g10.service.UserService;
 import com.g10.utils.OssUtil;
 import com.g10.utils.ThreadLocalUtil;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -16,13 +19,19 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AlbumControllerTest {
+
+    @InjectMocks
+    private AlbumController albumController;
 
     @Mock
     private AlbumService albumService;
@@ -33,211 +42,343 @@ class AlbumControllerTest {
     @Mock
     private OssUtil ossUtil;
 
-    @InjectMocks
-    private AlbumController albumController;
-
-    private AutoCloseable closeable;
-
     @BeforeEach
     void setUp() {
-//        albumService = mock(AlbumService.class);
-//        userService = mock(UserService.class);
-//        ossUtil = mock(OssUtil.class);
-//        albumController = new AlbumController(albumService, userService, ossUtil);
+        // 模拟当前登录用户
+        Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("id", 1000L);
+        ThreadLocalUtil.set(userInfo);
     }
 
     @AfterEach
-    void tearDown() throws Exception {
-        ThreadLocalUtil.remove();
-//        closeable.close();
+    void tearDown() {
+        ThreadLocalUtil.remove(); // 清理 ThreadLocal，避免影响其他测试
     }
 
     @Test
-    void testGetAllAlbums() {
-        // 模拟 ThreadLocal 里存储的当前用户信息
-        Map<String, Object> userInfo = new HashMap<>();
-        userInfo.put("id", 1000L);
-        ThreadLocalUtil.set(userInfo);
+    void testGetPhotosInAlbum_success() {
+        // 准备模拟数据
+        Long userId = 1000L;
+        Long albumId = 2000L;
 
-        // 构造 Photo 实例
-        Photo photo = new Photo(
-                1000L, // id
-                "photo", // title
-                "description", // description
-                "url", // url
-                "location", // location
-                "2024-01-01", // date
-                "tag1,tag2", // tags
-                LocalDateTime.now(), // uploadTime
-                null // album
+        // 1. 相册属于当前用户
+        User user = new User();
+        user.setId(userId);
+        Album album = new Album();
+        album.setId(albumId);
+        album.setUser(user);
+
+        // 2. PhotoDTO 列表
+        PhotoDTO photoDTO = new PhotoDTO(
+                3000L,                     // id
+                "title",                  // title
+                "originalUrl",            // url
+                "location",               // location
+                "tag1,tag2",              // tags
+                LocalDateTime.now(),      // uploadTime
+                albumId,                  // albumId
+                "2024-06-01",             // date
+                "description",            // description
+                "albumTitle"              // albumTitle
         );
 
+        // 3. 模拟依赖调用
+        when(albumService.getAlbumById(albumId)).thenReturn(album);
+        when(albumService.getPhotosInAlbum(albumId)).thenReturn(List.of(photoDTO));
+        when(ossUtil.generateSignedUrl("originalUrl")).thenReturn("signedUrl");
+
+        // 执行
+        Result<List<PhotoDTO>> result = albumController.getPhotosInAlbum(albumId);
+
+        // 验证返回
+        assertNotNull(result);
+        assertEquals(0, result.getCode());
+        assertEquals(1, result.getData().size());
+
+        PhotoDTO returnedPhoto = result.getData().get(0);
+        assertEquals("signedUrl", returnedPhoto.getUrl());
+        assertEquals("title", returnedPhoto.getTitle());
+        assertEquals("albumTitle", returnedPhoto.getAlbumTitle());
+    }
+
+    @Test
+    void testGetPhotosInAlbum_albumNotExist() {
+        when(albumService.getAlbumById(9999L)).thenReturn(null);
+
+        Result<List<PhotoDTO>> result = albumController.getPhotosInAlbum(9999L);
+
+        assertNotNull(result);
+        assertEquals(1, result.getCode());
+        assertEquals("相册不存在", result.getMessage());
+    }
+
+    @Test
+    void testGetPhotosInAlbum_userMismatch() {
+        // 当前用户 ID 是 1000，但相册属于 2000
+        User anotherUser = new User();
+        anotherUser.setId(2000L);
         Album album = new Album();
-        album.setId(1000L);
+        album.setId(3000L);
+        album.setUser(anotherUser);
+
+        when(albumService.getAlbumById(3000L)).thenReturn(album);
+
+        Result<List<PhotoDTO>> result = albumController.getPhotosInAlbum(3000L);
+
+        assertNotNull(result);
+        assertEquals(1, result.getCode());
+        assertEquals("无权访问该相册", result.getMessage());
+    }
+
+    @Test
+    void testGetAllAlbumsByType() {
+        Photo photo = new Photo();
+        photo.setUrl("url");
+
+        Album album = new Album();
         album.setPhotos(List.of(photo));
 
-        // 当调用 service 获取相册时，返回上述 album
-        when(albumService.getAllAlbumsByUserId(1000L)).thenReturn(List.of(album));
-        // 模拟 ossUtil 生成签名 URL
+        when(albumService.getAllAlbumsByType("default")).thenReturn(List.of(album));
         when(ossUtil.generateSignedUrl("url")).thenReturn("signedUrl");
 
-        // 断言：调用之前，原 url 是 "url"
-        assertEquals("url", album.getPhotos().get(0).getUrl());
-
-        // 调用控制器方法
         Result<List<Album>> result = albumController.getAllAlbums();
 
-        // 断言返回的结果包含了处理过的签名 URL
         assertEquals(1, result.getData().size());
         assertEquals("signedUrl", result.getData().get(0).getPhotos().get(0).getUrl());
-
-        // 测试完清理 ThreadLocal，避免影响其他测试
-        ThreadLocalUtil.remove();
     }
 
-
     @Test
-    void testCreateAlbum() {
-        // 准备 ThreadLocal 中的用户信息
+    void testCreateAlbum_success() {
+        // 模拟 ThreadLocal 当前用户
         Map<String, Object> userInfo = new HashMap<>();
-        userInfo.put("id", 1000L);
+        userInfo.put("id", 1L);
         ThreadLocalUtil.set(userInfo);
 
-        // 模拟 UserService 返回的用户实体
-        User user = new User();
-        user.setId(1000L);
-        when(userService.getUserById(1000L)).thenReturn(Optional.of(user));
-
-        // 创建输入的 Album
+        // 初始化参数
         Album album = new Album();
+        User user = new User();
+        user.setId(1L);
 
-        // 模拟 albumService.createAlbum 返回创建的相册（带有用户）
-        Album createdAlbum = new Album();
-        createdAlbum.setUser(user);
-        when(albumService.createAlbum(album)).thenReturn(createdAlbum);
+        // mock 行为
+        when(userService.getUserById(1L)).thenReturn(Optional.of(user));
+        when(albumService.createAlbum(any(Album.class))).thenReturn(album);
 
-        // 调用被测试方法
+        // 调用 controller
         Result<Album> result = albumController.createAlbum(album);
 
-        // 断言返回的相册带有正确的用户
-        assertNotNull(result);
-        assertEquals(user, result.getData().getUser());
+        // 断言
+        assertEquals(album, result.getData());
+        assertEquals("default", album.getType());
+        assertEquals(user, album.getUser());
 
-        // 清理 ThreadLocal 避免影响其他测试
         ThreadLocalUtil.remove();
     }
 
 
     @Test
-    void testGetAlbumById_withValidUser() {
-        // 模拟 ThreadLocal 中存当前用户ID
+    void testCreateAlbum_userNotFound() {
+        // 模拟 ThreadLocal 当前用户
         Map<String, Object> userInfo = new HashMap<>();
-        userInfo.put("id", 1000L);
+        userInfo.put("id", 1L);
         ThreadLocalUtil.set(userInfo);
 
-        User user = new User();
-        user.setId(1000L);
+        // mock 行为
+        when(userService.getUserById(1L)).thenReturn(Optional.empty());
 
-        Photo photo = new Photo(
-                1000L,
-                "photo",
-                "description",
-                "url",
-                "location",
-                "2024-01-01",
-                "tag1,tag2",
-                LocalDateTime.now(),
-                null
-        );
+        // 断言异常
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            albumController.createAlbum(new Album());
+        });
 
+        assertEquals("User not found", exception.getMessage());
+
+        ThreadLocalUtil.remove();
+    }
+
+    @Test
+    void testCreateAlbumByType_success() {
+        // 模拟 ThreadLocal 当前用户
+        Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("id", 1L);
+        ThreadLocalUtil.set(userInfo);
+
+        // 初始化参数
         Album album = new Album();
-        album.setId(1000L);
+        User user = new User();
+        user.setId(1L);
+
+        // mock 行为
+        when(userService.getUserById(1L)).thenReturn(Optional.of(user));
+        when(albumService.createAlbum(any(Album.class))).thenReturn(album);
+
+        // 调用 controller
+        Result<Album> result = albumController.createAlbumByType(album);
+
+        // 断言
+        assertEquals(album, result.getData());
+        assertEquals(user, album.getUser());
+
+        ThreadLocalUtil.remove();
+    }
+
+
+    @Test
+    void testGetAlbumById_success() {
+        // 模拟 ThreadLocal 当前用户
+        Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("id", 1L);
+        ThreadLocalUtil.set(userInfo);
+
+        // 准备数据
+        Album album = new Album();
+        album.setId(1L);
+        User user = new User();
+        user.setId(1L);
         album.setUser(user);
+
+        Photo photo = new Photo();
+        photo.setUrl("url");
         album.setPhotos(List.of(photo));
 
-        when(albumService.getAlbumById(1000L)).thenReturn(album);
+        // mock 行为
+        when(albumService.getAlbumById(1L)).thenReturn(album);
         when(ossUtil.generateSignedUrl("url")).thenReturn("signedUrl");
 
-        Result<Album> result = albumController.getAlbumById(1000L);
+        // 调用 controller
+        Result<Album> result = albumController.getAlbumById(1L);
+
+        // 断言
         assertEquals("signedUrl", result.getData().getPhotos().get(0).getUrl());
+        assertEquals(1L, result.getData().getUser().getId());
 
         ThreadLocalUtil.remove();
     }
 
     @Test
-    void testUpdateAlbum_withValidUser() {
-        // 模拟 ThreadLocal 中存当前用户ID
+    void testGetAlbumById_notFound() {
+        when(albumService.getAlbumById(999L)).thenReturn(null);
+
+        Result<Album> result = albumController.getAlbumById(999L);
+
+        assertEquals("相册不存在", result.getMessage());
+    }
+
+    @Test
+    void testGetAlbumById_unauthorized() {
+        Album album = new Album();
+        User user = new User();
+        user.setId(2L); // 与 ThreadLocal 中 ID 不一致
+        album.setUser(user);
+
+        when(albumService.getAlbumById(1L)).thenReturn(album);
+
+        Result<Album> result = albumController.getAlbumById(1L);
+
+        assertEquals("无权访问该相册", result.getMessage());
+    }
+
+    @Test
+    void testUpdateAlbum_success() {
+        // 模拟 ThreadLocal 中的用户信息
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("id", 1000L);
         ThreadLocalUtil.set(userInfo);
 
+        // 原始相册
         Album existingAlbum = new Album();
         existingAlbum.setId(1000L);
         User user = new User();
         user.setId(1000L);
         existingAlbum.setUser(user);
 
+        // 要更新的相册（只设置 title 模拟更新内容）
         Album updatedAlbum = new Album();
+        updatedAlbum.setTitle("Updated Album");
 
+        // 设置 Mock 行为
         when(albumService.getAlbumById(1000L)).thenReturn(existingAlbum);
-        when(albumService.updateAlbum(eq(1000L), any(Album.class))).thenReturn(existingAlbum);
+        when(albumService.updateAlbum(eq(1000L), any(Album.class))).thenReturn(updatedAlbum);
 
+        // 调用被测方法
         Result<Album> result = albumController.updateAlbum(1000L, updatedAlbum);
-        assertEquals(1000L, result.getData().getUser().getId());
 
+        // 断言结果
+        assertEquals("Updated Album", result.getData().getTitle());
+        assertEquals(user.getId(), updatedAlbum.getUser().getId());
+
+        // 清理 ThreadLocal
         ThreadLocalUtil.remove();
     }
 
 
     @Test
-    void testDeleteAlbum_withValidUser() {
-        // 模拟当前登录用户放入 ThreadLocal
-        Map<String, Object> userInfo = new HashMap<>();
-        userInfo.put("id", 1000L);
-        ThreadLocalUtil.set(userInfo);
+    void testUpdateAlbum_notFound() {
+        when(albumService.getAlbumById(99L)).thenReturn(null);
 
-        Album album = new Album();
-        album.setId(1000L);
-        User user = new User();
-        user.setId(1000L);
-        album.setUser(user);
+        Result<Album> result = albumController.updateAlbum(99L, new Album());
 
-        when(albumService.getAlbumById(1000L)).thenReturn(album);
-        doNothing().when(albumService).deleteAlbum(1000L);
-
-        Result<?> result = albumController.deleteAlbum(1000L);
-        assertTrue(result.getData().toString().contains("相册已删除"));
-
-        // 清理 ThreadLocal，防止对其他测试影响
-        ThreadLocalUtil.remove();
+        assertEquals("相册不存在", result.getMessage());
     }
 
     @Test
-    void testGetPhotosInAlbum() {
-        // 模拟当前登录用户放入 ThreadLocal
-        Map<String, Object> userInfo = new HashMap<>();
-        userInfo.put("id", 1000L);
-        ThreadLocalUtil.set(userInfo);
-
+    void testUpdateAlbum_unauthorized() {
         Album album = new Album();
-        album.setId(1000L);
         User user = new User();
-        user.setId(1000L);
+        user.setId(2L);
         album.setUser(user);
 
-        Photo photo = new Photo();
-        photo.setId(1000L);
-        photo.setUrl("originalUrl");
+        when(albumService.getAlbumById(1L)).thenReturn(album);
 
-        when(albumService.getAlbumById(1000L)).thenReturn(album);
-        when(albumService.getPhotosInAlbum(1000L)).thenReturn(List.of(photo));
-        when(ossUtil.generateSignedUrl("originalUrl")).thenReturn("signedUrl");
+        Result<Album> result = albumController.updateAlbum(1L, new Album());
 
-        Result<List<Photo>> result = albumController.getPhotosInAlbum(1000L);
-        assertEquals("signedUrl", result.getData().get(0).getUrl());
-
-        // 清理 ThreadLocal，防止对其他测试影响
-        ThreadLocalUtil.remove();
+        assertEquals("无权修改该相册", result.getMessage());
     }
 
+    @Test
+    void testDeleteAlbum_success() {
+        Album album = new Album();
+        User user = new User();
+        user.setId(1L);
+        album.setUser(user);
+
+        when(albumService.getAlbumById(1L)).thenReturn(album);
+
+        Result result = albumController.deleteAlbum(1L);
+        assertEquals(1, result.getCode());
+    }
+
+    @Test
+    void testDeleteAlbum_notFound() {
+        when(albumService.getAlbumById(1L)).thenReturn(null);
+
+        Result result = albumController.deleteAlbum(1L);
+
+        assertEquals("相册不存在", result.getMessage());
+    }
+
+    @Test
+    void testDeleteAlbum_unauthorized() {
+        Album album = new Album();
+        User user = new User();
+        user.setId(999L);
+        album.setUser(user);
+
+        when(albumService.getAlbumById(1L)).thenReturn(album);
+
+        Result result = albumController.deleteAlbum(1L);
+        assertEquals("无权删除该相册", result.getMessage());
+    }
+
+    @Test
+    void testDeleteAlbum_exception() {
+        Album album = new Album();
+        User user = new User();
+        user.setId(1L);
+        album.setUser(user);
+
+        when(albumService.getAlbumById(1L)).thenReturn(album);
+        Result result = albumController.deleteAlbum(1L);
+        assertEquals(1, result.getCode());
+    }
 }
+

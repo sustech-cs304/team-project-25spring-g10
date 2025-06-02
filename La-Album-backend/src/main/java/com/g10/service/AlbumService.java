@@ -1,5 +1,6 @@
 package com.g10.service;
 
+import com.g10.dto.PhotoDTO;
 import com.g10.model.*;
 import com.g10.repository.AlbumRepository;
 import com.g10.repository.PhotoRepository;
@@ -8,6 +9,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AlbumService {
@@ -51,9 +53,22 @@ public class AlbumService {
         return null;
     }
 
-    public List<Photo> getPhotosInAlbum(Long albumId) {
-        return photoRepository.findByAlbumId(albumId);
+    public List<PhotoDTO> getPhotosInAlbum(Long albumId) {
+        List<Photo> photos = photoRepository.findByAlbum_Id(albumId);
+        return photos.stream().map(photo -> new PhotoDTO(
+                photo.getId(),
+                photo.getTitle(),
+                photo.getUrl(),
+                photo.getLocation(),
+                photo.getTags(),
+                photo.getUploadTime(),
+                photo.getAlbum() != null ? photo.getAlbum().getId() : null,
+                photo.getDate(),
+                photo.getDescription(),
+                photo.getAlbum() != null ? photo.getAlbum().getTitle() : null
+        )).collect(Collectors.toList());
     }
+
 
     @Transactional
     public void deleteAlbum(Long albumId) {

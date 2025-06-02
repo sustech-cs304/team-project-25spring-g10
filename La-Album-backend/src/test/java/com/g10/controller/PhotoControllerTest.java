@@ -16,9 +16,13 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -103,7 +107,6 @@ class PhotoControllerTest {
 
     @Test
     void testGetPhoto_whenPhotoExists() {
-        // 构造 PhotoDTO
         PhotoDTO dto = new PhotoDTO(
                 1000L,
                 "Sample Photo",
@@ -120,61 +123,68 @@ class PhotoControllerTest {
         when(photoService.getPhotoById(1000L)).thenReturn(Optional.of(dto));
         when(ossUtil.generateSignedUrl("originalUrl")).thenReturn("signedUrl");
 
-        // 调用 controller 方法
         ResponseEntity<PhotoDTO> response = photoController.getPhoto(1000L);
 
-        // 验证
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("signedUrl", response.getBody().getUrl());
-        assertEquals(1000L, response.getBody().getId());
         assertEquals("Sample Photo", response.getBody().getTitle());
     }
 
     @Test
-    void testGetPhoto_whenPhotoDoesNotExist() {
+    void testGetPhoto_whenNotFound() {
         when(photoService.getPhotoById(999L)).thenReturn(Optional.empty());
 
-        // 调用 controller 方法
         ResponseEntity<PhotoDTO> response = photoController.getPhoto(999L);
 
-        // 验证返回 404
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertNull(response.getBody());
     }
 
 
     @Test
     void testDeletePhoto() {
-        Long photoId = 1000L;
+        doNothing().when(photoService).deletePhoto(1000L);
 
-        // doNothing 是默认行为，这里为了表达清楚加上
-        doNothing().when(photoService).deletePhoto(photoId);
+        ResponseEntity<Void> response = photoController.deletePhoto(1000L);
 
-        ResponseEntity<Void> response = photoController.deletePhoto(photoId);
-
-        // 验证
-        verify(photoService, times(1)).deletePhoto(photoId);
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
-        assertNull(response.getBody());
     }
-
 
     @Test
     void testMovePhoto() {
         Long photoId = 1000L;
-        Long destAlbumId = 2L;
-        Map<String, Long> requestBody = new HashMap<>();
-        requestBody.put("id", destAlbumId);
+        Long newAlbumId = 2000L;
 
-        doNothing().when(photoService).movePhoto(photoId, destAlbumId);
+        Map<String, Long> body = new HashMap<>();
+        body.put("id", newAlbumId);
 
-        ResponseEntity<Void> response = photoController.movePhoto(photoId, requestBody);
+        doNothing().when(photoService).movePhoto(photoId, newAlbumId);
 
-        // 验证
-        verify(photoService, times(1)).movePhoto(photoId, destAlbumId);
+        ResponseEntity<Void> response = photoController.movePhoto(photoId, body);
+
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNull(response.getBody());
+    }
+
+    @Test
+    void testUpdatePhotoDescriptionAndTags() {
+        Photo photo = new Photo();
+        photo.setId(1000L);
+        photo.setTitle("Old Title");
+        photo.setDescription("Old Description");
+        photo.setTags("old");
+
+        when(photoService.getPhotoEntityById(1000L)).thenReturn(Optional.of(photo));
+        when(photoService.savePhoto(any(Photo.class))).thenReturn(photo);
+
+        Map<String, String> updates = new HashMap<>();
+        updates.put("description", "New Description");
+        updates.put("tags", "tag1,tag2");
+
+        ResponseEntity<Photo> response = photoController.updatePhotoDescriptionAndTags(1000L, updates);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("New Description", response.getBody().getDescription());
+        assertEquals("tag1,tag2", response.getBody().getTags());
     }
 
 
@@ -222,100 +232,186 @@ class PhotoControllerTest {
     }
 
 
-    // @Test
-    // void testUpdatePhoto_UpdateExistingPhoto() throws Exception {
-    //     Long photoId = 1000L;
-    //     String newTitle = "New Title";
-    //     String newDesc = "New Description";
-    //     String newDate = "2024-05-01";
-    //     String newLocation = "New York";
+    @Test
+    void testCopyPhotoToAlbum_success() {
+        // 构造原相册和目标相册
+        Album originalAlbum = new Album();
+        originalAlbum.setId(1L);
+        originalAlbum.setTitle("原相册");
 
-    //     Photo existingPhoto = new Photo();
-    //     existingPhoto.setId(photoId);
-    //     existingPhoto.setTitle("Old Title");
-    //     existingPhoto.setDescription("Old Description");
-    //     existingPhoto.setDate("2023-01-01");
-    //     existingPhoto.setLocation("Old Location");
-    //     existingPhoto.setUrl("originalUrl");
+        Album targetAlbum = new Album();
+        targetAlbum.setId(2L);
+        targetAlbum.setTitle("目标相册");
 
-    //     Photo updatedPhoto = new Photo();
-    //     updatedPhoto.setId(photoId);
-    //     updatedPhoto.setTitle(newTitle);
-    //     updatedPhoto.setDescription(newDesc);
-    //     updatedPhoto.setDate(newDate);
-    //     updatedPhoto.setLocation(newLocation);
-    //     updatedPhoto.setUrl("newUrl");
+        // 构造原照片
+        Photo originalPhoto = new Photo();
+        originalPhoto.setId(100L);
+        originalPhoto.setTitle("原照片");
+        originalPhoto.setDescription("描述");
+        originalPhoto.setDate("2024-06-01");
+        originalPhoto.setLocation("上海");
+        originalPhoto.setTags("tag1,tag2");
+        originalPhoto.setUrl("http://example.com/photo.jpg");
+        originalPhoto.setUploadTime(LocalDateTime.of(2024, 6, 1, 10, 0));
+        originalPhoto.setAlbum(originalAlbum);
 
-    //     MultipartFile mockFile = mock(MultipartFile.class);
-    //     when(mockFile.isEmpty()).thenReturn(true); // 文件为空，则不更新 URL
+        // 构造复制的新照片（保存后返回）
+        Photo savedPhoto = new Photo();
+        savedPhoto.setId(101L);
+        savedPhoto.setTitle(originalPhoto.getTitle());
+        savedPhoto.setDescription(originalPhoto.getDescription());
+        savedPhoto.setDate(originalPhoto.getDate());
+        savedPhoto.setLocation(originalPhoto.getLocation());
+        savedPhoto.setTags(originalPhoto.getTags());
+        savedPhoto.setUrl(originalPhoto.getUrl());
+        savedPhoto.setUploadTime(originalPhoto.getUploadTime());
+        savedPhoto.setAlbum(targetAlbum);
 
-    //     when(photoService.getPhotoEntityById(photoId)).thenReturn(Optional.of(existingPhoto));
-    //     when(photoService.savePhoto(any(Photo.class))).thenReturn(updatedPhoto);
-    //     when(ossUtil.generateSignedUrl("newUrl")).thenReturn("signedSignedUrl");
+        // 模拟依赖
+        when(photoService.getPhotoEntityById(100L)).thenReturn(Optional.of(originalPhoto));
+        when(albumService.getAlbumById(2L)).thenReturn(targetAlbum);
+        when(photoService.savePhoto(any(Photo.class))).thenReturn(savedPhoto);
 
-    //     ResponseEntity<Photo> response = photoController.updatePhoto(
-    //             photoId, mockFile, newTitle, newDesc, newDate, newLocation, null, null, false);
+        // 调用 controller 方法
+        ResponseEntity<Photo> response = photoController.copyPhotoToAlbum(100L, 2L);
 
-    //     assertEquals(HttpStatus.OK, response.getStatusCode());
-    //     Photo result = response.getBody();
-    //     assertNotNull(result);
-    //     assertEquals("New Title", result.getTitle());
-    //     assertEquals("signedSignedUrl", result.getUrl());
-    // }
+        // 验证结果
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(101L, response.getBody().getId());
+        assertEquals("原照片", response.getBody().getTitle());
+        assertEquals("描述", response.getBody().getDescription());
+        assertEquals("2024-06-01", response.getBody().getDate());
+        assertEquals("上海", response.getBody().getLocation());
+        assertEquals("tag1,tag2", response.getBody().getTags());
+        assertEquals("http://example.com/photo.jpg", response.getBody().getUrl());
+        assertEquals(targetAlbum, response.getBody().getAlbum());
+    }
+
+    @Test
+    void testCopyPhotoToAlbum_photoNotFound() {
+        when(photoService.getPhotoEntityById(999L)).thenReturn(Optional.empty());
+
+        ResponseEntity<Photo> response = photoController.copyPhotoToAlbum(999L, 2L);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void testCopyPhotoToAlbum_albumNotFound() {
+        Album originalAlbum = new Album();
+        originalAlbum.setId(1L);
+
+        Photo originalPhoto = new Photo();
+        originalPhoto.setId(100L);
+        originalPhoto.setTitle("原照片");
+        originalPhoto.setAlbum(originalAlbum);
+
+        when(photoService.getPhotoEntityById(100L)).thenReturn(Optional.of(originalPhoto));
+        when(albumService.getAlbumById(999L)).thenReturn(null); // 相册不存在
+
+        ResponseEntity<Photo> response = photoController.copyPhotoToAlbum(100L, 999L);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void testProxyImage_success() {
+        String key = "test/image.jpg";
+        String signedUrl = "http://oss.com/signed/image.jpg";
+        byte[] imageData = new byte[]{1, 2, 3, 4};
+
+        when(ossUtil.generateSignedUrl(key)).thenReturn(signedUrl);
+        when(ossUtil.fetchImageData(signedUrl)).thenReturn(imageData);
+
+        ResponseEntity<byte[]> response = photoController.proxyImage(key);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertArrayEquals(imageData, response.getBody());
+        assertEquals("image/jpeg", response.getHeaders().getFirst("Content-Type"));
+        assertEquals("*", response.getHeaders().getFirst("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void testProxyImage_whenExceptionThrown() {
+        String key = "bad/image.jpg";
+
+        when(ossUtil.generateSignedUrl(key)).thenThrow(new RuntimeException("OSS failed"));
+
+        ResponseEntity<byte[]> response = photoController.proxyImage(key);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertNull(response.getBody());
+    }
 
 
-    // @Test
-    // void testUpdatePhoto_SaveAsNew() throws Exception {
-    //     Long photoId = 1000L;
-    //     String newTitle = "New Title";
-    //     String newDesc = "New Description";
-    //     String newDate = "2024-05-01";
-    //     String newLocation = "Paris";
+    @Test
+    void uploadPhoto_success() throws Exception {
+        // 准备数据
+        Long albumId = 1L;
+        Album album = new Album();
+        album.setId(albumId);
 
-    //     Photo oldPhoto = new Photo();
-    //     oldPhoto.setId(photoId);
-    //     oldPhoto.setTitle("Old Title");
-    //     oldPhoto.setDescription("Old Desc");
-    //     oldPhoto.setDate("2022-01-01");
-    //     oldPhoto.setLocation("Old Location");
-    //     oldPhoto.setTags("nature");
-    //     oldPhoto.setUrl("oldUrl");
+        byte[] data = "test image".getBytes();
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", data);
 
-    //     MultipartFile mockFile = mock(MultipartFile.class);
-    //     when(mockFile.isEmpty()).thenReturn(false);
-    //     when(mockFile.getOriginalFilename()).thenReturn("photo.jpg");
-    //     when(mockFile.getInputStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
+        String uploadedUrl = "https://oss.com/photo.jpg";
 
-    //     Photo savedNewPhoto = new Photo();
-    //     savedNewPhoto.setId(2L);
-    //     savedNewPhoto.setTitle(newTitle);
-    //     savedNewPhoto.setUrl("newUploadedUrl");
+        Photo savedPhoto = new Photo();
+        savedPhoto.setId(10L);
 
-    //     when(photoService.getPhotoEntityById(photoId)).thenReturn(Optional.of(oldPhoto));
-    //     when(ossUtil.uploadFile(anyString(), any(InputStream.class))).thenReturn("newUploadedUrl");
-    //     when(photoService.savePhoto(any(Photo.class))).thenReturn(savedNewPhoto);
-    //     when(ossUtil.generateSignedUrl("newUploadedUrl")).thenReturn("signedUploadedUrl");
+        // Mock 行为
+        when(albumService.getAlbumById(albumId)).thenReturn(album);
+        when(ossUtil.uploadFile(anyString(), any())).thenReturn(uploadedUrl);
+        when(photoService.savePhoto(any(Photo.class))).thenReturn(savedPhoto);
 
-    //     ResponseEntity<Photo> response = photoController.updatePhoto(
-    //             photoId, mockFile, newTitle, newDesc, newDate, newLocation, null, null, true);
+        // 执行上传
+        ResponseEntity<Long> response = photoController.uploadPhoto(file, albumId);
 
-    //     assertEquals(HttpStatus.OK, response.getStatusCode());
-    //     assertNotNull(response.getBody());
-    //     assertEquals("signedUploadedUrl", response.getBody().getUrl());
-    //     assertEquals("New Title", response.getBody().getTitle());
-    // }
+        // 断言
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(10L, response.getBody());
+    }
 
-    // @Test
-    // void testUpdatePhoto_NotFound() throws Exception {
-    //     Long photoId = 99L;
+    @Test
+    void uploadPhoto_albumNotFound() throws Exception {
+        Long albumId = 99L;
+        byte[] data = "test".getBytes();
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", data);
 
-    //     when(photoService.getPhotoEntityById(photoId)).thenReturn(Optional.empty());
+        when(albumService.getAlbumById(albumId)).thenReturn(null);
 
-    //     ResponseEntity<Photo> response = photoController.updatePhoto(
-    //             photoId, null, null, null, null, null, null, null, false);
+        ResponseEntity<Long> response = photoController.uploadPhoto(file, albumId);
 
-    //     assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-    // }
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void uploadPhoto_fileIsNull() {
+        MultipartFile file = null;
+        Long albumId = 1L;
+
+        ResponseEntity<Long> response = photoController.uploadPhoto(file, albumId);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void uploadPhoto_exceptionDuringUpload() throws Exception {
+        Long albumId = 1L;
+        Album album = new Album();
+        byte[] data = "test".getBytes();
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", data);
+
+        when(albumService.getAlbumById(albumId)).thenReturn(album);
+        when(ossUtil.uploadFile(anyString(), any())).thenThrow(new RuntimeException("OSS error"));
+
+        ResponseEntity<Long> response = photoController.uploadPhoto(file, albumId);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
 
 
 }

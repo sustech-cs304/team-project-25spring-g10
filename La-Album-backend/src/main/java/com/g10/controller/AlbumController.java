@@ -1,5 +1,6 @@
 package com.g10.controller;
 
+import com.g10.dto.PhotoDTO;
 import com.g10.model.Album;
 import com.g10.model.Photo;
 import com.g10.model.Result;
@@ -124,6 +125,7 @@ public class AlbumController {
             for (Photo photo : album.getPhotos()) {
                 String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
                 photo.setUrl(signedUrl);
+                System.out.println("Photo URL: " + photo.getUrl() + "photo id: " + photo.getId());
             }
         }
         return Result.success(album);
@@ -155,11 +157,11 @@ public class AlbumController {
 
     // 获取相册中的所有照片
     @GetMapping("/{albumId}/photos")
-    public Result<List<Photo>> getPhotosInAlbum(@PathVariable Long albumId) {
+    public Result<List<PhotoDTO>> getPhotosInAlbum(@PathVariable Long albumId) {
         // 从ThreadLocal中获取当前用户信息
         Map<String, Object> userInfo = ThreadLocalUtil.get();
         Long userId = Long.valueOf(userInfo.get("id").toString());
-        
+
         // 验证相册是否属于当前用户
         Album album = albumService.getAlbumById(albumId);
         if (album == null) {
@@ -168,17 +170,19 @@ public class AlbumController {
         if (!album.getUser().getId().equals(userId)) {
             return Result.error("无权访问该相册");
         }
-        
-        List<Photo> photos = albumService.getPhotosInAlbum(albumId);
-        
-        // 为每个照片生成签名URL
-        for (Photo photo : photos) {
-            String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
-            photo.setUrl(signedUrl);
+
+        // 使用 DTO 方式获取照片信息
+        List<PhotoDTO> photos = albumService.getPhotosInAlbum(albumId);
+
+        // 为每个照片生成签名 URL
+        for (PhotoDTO photodto : photos) {
+            String signedUrl = ossUtil.generateSignedUrl(photodto.getUrl());
+            photodto.setUrl(signedUrl);
         }
-        
+
         return Result.success(photos);
     }
+
 
     // 删除相册（并将照片移动至垃圾桶）
     @DeleteMapping("/{id}")
@@ -202,4 +206,6 @@ public class AlbumController {
             return Result.error("删除相册失败：" + e.getMessage());
         }
     }
+
+
 }

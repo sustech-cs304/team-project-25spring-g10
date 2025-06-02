@@ -228,13 +228,26 @@ const sharePhoto = () => {
   router.push({name: 'SharePhoto', params: {id: photo.value.id}});
 };
 
-const confirmDelete = () => {
-  ElMessageBox.confirm(`您确定要删除照片"${photo.value.title}"吗？此操作不可撤销。`, '确认删除', {
-    confirmButtonText: '删除',
-    cancelButtonText: '取消',
-    type: 'warning',
-  }).then(() => deletePhoto());
+const confirmDelete = async () => {
+  try {
+    await ElMessageBox.confirm('确定要删除这张照片吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+
+    // 用户点击“确定”后，执行删除逻辑
+    await deletePhoto();  // 你已有的删除逻辑函数
+  } catch (err) {
+    if (err === 'cancel' || err === 'close') {
+      console.log('用户取消了删除操作');
+    } else {
+      console.error('删除确认框出错:', err);
+      ElMessage.error('删除操作异常');
+    }
+  }
 };
+
 
 const cancelDelete = () => showDeleteModal.value = false;
 

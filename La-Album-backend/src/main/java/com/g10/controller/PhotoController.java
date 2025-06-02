@@ -74,8 +74,6 @@ public class PhotoController {
         }
     }
 
-
-
     @PostMapping("/upload")
     public ResponseEntity<Long> uploadPhoto(
             @RequestParam("file") MultipartFile file,
@@ -360,42 +358,44 @@ public ResponseEntity<Photo> copyPhotoToAlbum(
         }
     }
 
-    @PostMapping("/api/photos")
-    public ResponseEntity<?> uploadPhoto(
-            @RequestParam("image") MultipartFile file,
-            @RequestParam("title") String title,
-            @RequestParam("description") String description,
-            @RequestParam(value = "date", required = false) String date,
-            @RequestParam(value = "location", required = false) String location,
-            @RequestParam(value = "albumId", required = false) String albumId,
-            @RequestParam(value = "tags", required = false) String tagsJson,
-            HttpServletRequest request
-    ) {
-        try {
-            Map<String, Object> userInfo = ThreadLocalUtil.get();
-            Long userId = Long.valueOf(userInfo.get("id").toString());
-            String ossUrl = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
-
-            Photo newPhoto = new Photo();
-            newPhoto.setTitle(title);
-            newPhoto.setDescription(description);
-            newPhoto.setDate(date);
-            newPhoto.setLocation(location);
-            if (albumId != null && !albumId.isEmpty()) {
-                Album album = albumService.getAlbumById(Long.parseLong(albumId));
-                if (album != null) {
-                    newPhoto.setAlbum(album);
-                }
-            }
-            newPhoto.setTags(tagsJson);
-            newPhoto.setUrl(ossUrl);
-
-            photoService.savePhoto(newPhoto);
-            return ResponseEntity.ok(newPhoto);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("上传失败: " + e.getMessage());
-        }
-    }
+//    @PostMapping("/api/photos")
+//    public ResponseEntity<?> uploadPhoto(
+//            @RequestParam("image") MultipartFile file,
+//            @RequestParam("title") String title,
+//            @RequestParam("description") String description,
+//            @RequestParam(value = "date", required = false) String date,
+//            @RequestParam(value = "location", required = false) String location,
+//            @RequestParam(value = "albumId", required = false) String albumId,
+//            @RequestParam(value = "tags", required = false) String tagsJson,
+//            HttpServletRequest request
+//    ) {
+//        try {
+//            Map<String, Object> userInfo = ThreadLocalUtil.get();
+//            Long userId = Long.valueOf(userInfo.get("id").toString());
+//            String ossUrl = ossUtil.uploadFile(file.getOriginalFilename(), file.getInputStream());
+//
+//            Photo newPhoto = new Photo();
+//            newPhoto.setTitle(title);
+//            newPhoto.setDescription(description);
+//            newPhoto.setDate(date);
+//            newPhoto.setLocation(location);
+//            Album defaultAlbum = albumService.getDefaultAlbumForUser(userId);
+//            newPhoto.setAlbum(defaultAlbum);
+//            if (albumId != null && !albumId.isEmpty()) {
+//                Album album = albumService.getAlbumById(Long.parseLong(albumId));
+//                if (album != null) {
+//                    newPhoto.setAlbum(album);
+//                }
+//            }
+//            newPhoto.setTags(tagsJson);
+//            newPhoto.setUrl(ossUrl);
+//
+//            photoService.savePhoto(newPhoto);
+//            return ResponseEntity.ok(newPhoto);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("上传失败: " + e.getMessage());
+//        }
+//    }
 
 }

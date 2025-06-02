@@ -42,9 +42,16 @@
 - `docker-compose.yml`：部署配置
 
 ## Part III.  Tests (2 Points)
+后端使用JUnit 5和Mockito 进行测试, 使用Jacoco生成测试覆盖报告。  
+![alt text](tests.png)
+前端使用Jest进行测试。
+![alt text](frontend-test.png)
 
 ## Part IIII.  Build (2 Points)
-
+使用github actions 完成自动化build和deploy流程:   
+![alt text](actions.png)   
+执行后可以上传到dockerhub，本地拉取并运行：
+![alt text](build-success.png)   
 
 ### 1. Architectural Design
 
