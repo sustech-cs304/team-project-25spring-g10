@@ -105,6 +105,7 @@ public class PhotoController {
             photo.setTitle(file.getOriginalFilename());
             photo.setUrl(url);
             photo.setAlbum(album);
+            photo.setLocation("深圳");
             // 保存到数据库
             Photo savedPhoto = photoService.savePhoto(photo);
             return ResponseEntity.ok(savedPhoto.getId());

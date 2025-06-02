@@ -63,6 +63,25 @@ public class AlbumController {
         return Result.success(albums);
     }
 
+    @GetMapping("/title/{title}")
+    public Result<List<Album>> getAllAlbumsByTitle(@PathVariable String title) {
+        // Map<String, Object> userInfo = ThreadLocalUtil.get();
+        // Long userId = Long.valueOf(userInfo.get("id").toString());
+        // List<Album> albums = albumService.getAllAlbumsByUserId(userId);
+        List<Album> albums = albumService.getAllAlbumsByTitle(title);
+        
+        // 为每个相册中的每张照片添加签名URL
+        for (Album album : albums) {
+            if (album.getPhotos() != null) {
+                for (Photo photo : album.getPhotos()) {
+                    String signedUrl = ossUtil.generateSignedUrl(photo.getUrl());
+                    photo.setUrl(signedUrl);
+                }
+            }
+        }
+        return Result.success(albums);
+    }
+
     // 创建相册
     @PostMapping
     public Result<Album> createAlbum(@RequestBody Album album) {
@@ -148,6 +167,7 @@ public class AlbumController {
         // 保持原有用户信息
         updatedAlbum.setId(id);
         updatedAlbum.setUser(existingAlbum.getUser());
+        updatedAlbum.setType(existingAlbum.getType());
         
         Album result = albumService.updateAlbum(id, updatedAlbum);
         return Result.success(result);

@@ -29,7 +29,7 @@ CORS(app)  # 允许所有域名访问
 
 # Initialize MTCNN and InceptionResnetV1
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-mtcnn = MTCNN(device=device)
+mtcnn = MTCNN(device=device,keep_all=True)
 resnet = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
 @app.route('/')
@@ -170,6 +170,7 @@ def auto_class():
                 })
         
         if(len(photo_album_mapping)<=1):
+            print ('没有其他人脸照片')
             return jsonify({"albumId": 0}), 200
 
         results = []
@@ -188,10 +189,14 @@ def auto_class():
             x_aligned, probs = mtcnn(image,return_prob=True)
            
             if x_aligned is not None:
-                print('检测到的人脸及其概率: {:8f}'.format(probs))
-                aligned.append(x_aligned)
+                if len(x_aligned)>1:
+                    print('检测到多个人脸,是一张合照')
+                    return jsonify({"albumId": -2}), 200
+                print(f'检测到的人脸及其概率: {probs}')  # 简单打印
+                aligned.append(x_aligned[0])
             else:
                 #未检测出人脸
+                print('未检测出人脸')
                 return jsonify({"albumId": -1}), 200
                 # names.append(dataset.idx_to_class[y])
 
@@ -209,6 +214,7 @@ def auto_class():
         index = np.argmax(similarities)
         print(similarities[index])
         if similarities[index]<0.5:
+            print('没有找到相似的人脸')
             return jsonify({"albumId": 0}), 200
         
         index=index+1

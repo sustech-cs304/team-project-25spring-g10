@@ -121,7 +121,8 @@
 
 <script>
 import ImageEditor from '@/components/ImageEditor.vue';
-
+import { copyPhotoToAlbum} from '@/api/photo';
+import {createAlbumByType as createAlbumByTypeApi,fetchAlbumByTitle} from '@/api/album';
 export default {
   name: 'EditPhoto',
   components: {
@@ -288,6 +289,45 @@ export default {
         this.photo.tags.splice(index, 1);
       }
     },
+      //获取全部照片的id
+      getDefaultAlbumId() {
+    try {
+        // 将类似对象的 JSON 转换为真正的数组
+        const albumsArray = Object.values(this.albums.data);
+        console.log('获取的相册数据:',albumsArray);
+        // 在数组中查找 title 为"全部照片"的相册
+        const defaultAlbum = albumsArray.find(album => album.title === '全部照片');
+        
+        // 如果找到则返回 ID，否则返回 null
+        return defaultAlbum ? defaultAlbum.id : null;
+    } catch (error) {
+        console.error('获取默认相册ID失败:', error);
+        return null;
+    }
+    },
+    async createAlbumByType(type,name){
+
+    try {
+        // 调用实际API创建相册
+        const response = await createAlbumByTypeApi({
+        title: name,
+        description: '',
+        type: type
+        });
+
+        if (response && response.code === 0 && response.data) {
+        const newAlbumData = response.data;
+
+        return newAlbumData.id; // 返回新相册ID
+        } else {
+        return null;
+        }
+    } catch (error) {
+        console.error('创建相册失败:', error);
+        return null;
+    } 
+    },
+  
     async save() {
       try {
         this.isSaving = true;
@@ -318,12 +358,34 @@ export default {
           },
           body: formData
         });
-
-        if (!response.ok) throw new Error('上传失败');
-        const data = await response.json();
-        this.photo.url = data.url;  // 如果后端返回新图片地址
+        
+        // if (!response.ok) throw new Error('上传失败');
+        const photoID = await response.json();
         alert('保存成功！');
-        this.$emit('save-complete', data);
+        const defaultAlbumId = this.getDefaultAlbumId();
+       //若不是给默认相册上传，则自动上传到默认相册
+       if(this.photo.albumId!=defaultAlbumId){
+        await copyPhotoToAlbum(photoID,defaultAlbumId)
+       }
+       //把照片分类为编辑相册
+       const responseType = await fetchAlbumByTitle('编辑');
+        // 判断返回结果是否为空数组
+        if (responseType.length === 0) {
+        console.log('没有找到相关类型的相册',this.albums);
+        // 处理空数组情况
+        // 例如：创建新相册
+        const newAlbumID = await this.createAlbumByType('auto','编辑');
+        await copyPhotoToAlbum(photoID,newAlbumID)
+        } else {
+        console.log('找到相册:', responseType);
+        // 处理非空情况
+        // 例如：使用第一个相册
+        const albumId = responseType[0].id;
+        await copyPhotoToAlbum(photoID,albumId)
+        }
+       this.$emit('save-complete', photoID);
+
+
       } catch (error) {
         console.error('[DEBUG] 上传失败:', error);
         this.$emit('error', error);
