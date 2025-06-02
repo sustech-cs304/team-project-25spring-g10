@@ -338,9 +338,18 @@ export default {
       this.loadData();
     },
     openStyleTransfer() {
-    console.log('[点击风格迁移]', this.photo.id);
-    this.$router.push(`/style-transfer/${this.photo.id}`)
-    console.log('[点击风格迁移]', this.photo.id);
+      console.log('[点击风格迁移]', this.photo.id);
+      this.$router.push({
+        path: `/style-transfer/${this.photo.id}`,
+        query: {
+          albumId: this.photo.albumId,
+          title: this.photo.title,
+          description: this.photo.description,
+          location: this.photo.location,
+          date: this.photo.date,
+          tags: JSON.stringify(this.photo.tags || [])
+        }
+      });
     }
   },
   

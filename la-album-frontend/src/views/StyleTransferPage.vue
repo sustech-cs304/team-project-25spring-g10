@@ -44,7 +44,7 @@
       <div class="result-actions">
         <button 
           class="save-button" 
-          @click="saveToOss" 
+          @click="save" 
           :disabled="!resultUrl"
         >
           💾 保存
@@ -129,32 +129,76 @@
         this.resultUrl = URL.createObjectURL(resultBlob);
         this.isLoading = false;
       },
-      async saveToOss() {
-        if (!this.resultUrl) return;
+      async save() {
+        try {
+          if (!this.resultUrl) {
+            alert('没有可保存的图像');
+            console.warn('[DEBUG] resultUrl is empty');
+            return;
+          }
 
-        const blob = await fetch(this.resultUrl).then(r => r.blob());
-        const formData = new FormData();
-        formData.append('image', blob, 'stylized.jpg');
-        formData.append('title', '风格迁移结果');
-        formData.append('description', '由风格迁移生成'); 
-        formData.append('tags', JSON.stringify(['风格迁移']));
-        formData.append('saveAsNew', 'true');
+          this.isSaving = true;
 
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/photos', {
-          method: 'POST',
-          headers: {
-            Authorization: token
-          },
-          body: formData
-        });
+          console.log('[DEBUG] Fetching resultUrl blob...');
+          const response = await fetch(this.resultUrl);
+          const blob = await response.blob();
+          console.log('[DEBUG] Blob fetched, size:', blob.size);
 
-        if (response.ok) {
+          const file = new File([blob], 'styled-image.jpg', { type: 'image/jpeg' });
+          console.log('[DEBUG] Created File object:', file);
+
+          const formData = new FormData();
+          formData.append('file', file, file.name);
+
+          // 日志打印字段值
+          const albumId = this.$route.query.albumId || '';
+          const title = this.$route.query.title || '';
+          const description = this.$route.query.description || '';
+          const location = this.$route.query.location || '';
+          const date = this.$route.query.date || '';
+          const tags = this.$route.query.tags || '[]';
+
+          console.log('[DEBUG] Metadata:', {
+            albumId, title, description, location, date, tags
+          });
+
+          formData.append('albumId', albumId);
+          formData.append('title', title);
+          formData.append('description', description);
+          formData.append('location', location);
+          formData.append('date', date);
+          formData.append('tags', tags);
+
+          const token = localStorage.getItem('token');
+          console.log('[DEBUG] Sending upload request with token:', token?.slice(0, 10) + '...');
+
+          const uploadRes = await fetch('/api/photos/upload', {
+            method: 'POST',
+            headers: {
+              Authorization: `${token}`,
+            },
+            body: formData
+          });
+
+          console.log('[DEBUG] Response status:', uploadRes.status);
+          const contentType = uploadRes.headers.get('content-type');
+          console.log('[DEBUG] Response content-type:', contentType);
+
+          if (!uploadRes.ok) throw new Error('上传失败');
+
+          const data = contentType?.includes('application/json') ? await uploadRes.json() : null;
+          console.log('[DEBUG] Server response JSON:', data);
+
           alert('保存成功！');
-        } else {
-          alert('保存失败');
+          this.$emit('save-complete', data);
+        } catch (error) {
+          console.error('[DEBUG] 上传失败:', error);
+          this.$emit('error', error);
+        } finally {
+          this.isSaving = false;
         }
       },
+
 
       goBack() {
         this.$router.back();

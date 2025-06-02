@@ -48,10 +48,7 @@
 ![alt text](frontend-test.png)
 
 ## Part IIII.  Build (2 Points)
-使用github actions 完成自动化build和deploy流程:   
-![alt text](actions.png)   
-执行后可以上传到dockerhub，本地拉取并运行：
-![alt text](build-success.png)   
+
 
 ### 1. Architectural Design
 
