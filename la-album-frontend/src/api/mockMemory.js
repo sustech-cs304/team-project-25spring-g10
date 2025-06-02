@@ -51,17 +51,17 @@ const demoBgMusic = [
   },
   { 
     id: 2, 
-    name: "浪漫温馨", 
-    style: "浪漫",
-    description: "适合恋人、家庭等温馨瞬间",
-    previewUrl: require('@/assets/audio/startmenu0.mp3') 
+    name: "八方来财", 
+    style: "财富",
+    description: "适合没钱的一些温馨瞬间",
+    previewUrl: require('@/assets/audio/八方来财.mp3') 
   },
   { 
     id: 3, 
     name: "动感节奏", 
     style: "动感",
-    description: "适合运动、派对等充满活力的场景",
-    previewUrl: require('@/assets/audio/startmenu0.mp3') 
+    description: "适合软工写不出来的场景",
+    previewUrl: require('@/assets/audio/The Fox.mp3') 
   },
   { 
     id: 4, 
@@ -252,19 +252,28 @@ export const getMemoryById = async (id) => {
           // 查找背景音乐
           const bgm = demoBgMusic.find(b => b.id === memory.bgmId);
           
+          // 确保总是有bgmUrl，如果找不到对应的音乐，使用默认的
+          let bgmUrl = null;
+          if (bgm && bgm.previewUrl) {
+            bgmUrl = bgm.previewUrl;
+          } else {
+            // 如果找不到对应的音乐，使用第一个音乐作为默认
+            bgmUrl = demoBgMusic[0].previewUrl;
+          }
+          
           // 记录背景音乐信息
           console.log('返回的背景音乐信息:', {
             bgmId: memory.bgmId,
             bgmFound: !!bgm,
             bgmName: bgm ? bgm.name : '未找到',
-            bgmUrl: bgm ? bgm.previewUrl : null
+            bgmUrl: bgmUrl
           });
           
           resolve({
             ...memory,
             photos,
             // 添加背景音乐URL
-            bgmUrl: bgm ? bgm.previewUrl : null
+            bgmUrl: bgmUrl
           });
         });
       } else {
@@ -360,6 +369,9 @@ export const generateMemory = async (data) => {
   // 获取背景音乐
   const bgm = demoBgMusic.find(item => item.id === (data.bgmId || 1));
   
+  // 确保bgmUrl不为null
+  let bgmUrl = bgm && bgm.previewUrl ? bgm.previewUrl : demoBgMusic[0].previewUrl;
+  
   // 打印选中照片的时长信息，方便调试
   console.log('选中照片的时长信息:', selectedPhotos.map(p => ({
     id: p.id,
@@ -387,7 +399,7 @@ export const generateMemory = async (data) => {
         albumName,
         bgmId: data.bgmId || 1,
         bgmName: bgm ? bgm.name : '默认音乐',
-        bgmUrl: bgm ? bgm.previewUrl : null,
+        bgmUrl: bgmUrl,
         transition: data.transition || 'fade',
         createdAt: new Date().toISOString(),
         photoCount: selectedPhotos.length,
@@ -428,7 +440,7 @@ export const updateMemory = async (id, data) => {
   // 获取背景音乐信息
   const bgm = demoBgMusic.find(item => item.id === (data.bgmId || memory.bgmId));
   memory.bgmName = bgm ? bgm.name : '默认音乐';
-  memory.bgmUrl = bgm ? bgm.previewUrl : null;
+  memory.bgmUrl = bgm && bgm.previewUrl ? bgm.previewUrl : demoBgMusic[0].previewUrl;
   
   memory.transition = data.transition || memory.transition;
   

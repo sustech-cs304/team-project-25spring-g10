@@ -23,7 +23,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/users/login",
                         "/api/users/register",
                         "/static/**",
-                        "/api/files/**"
+                        "/api/files/**",
+                        "/api/audio/**"  // 排除音频文件请求
                 );
     }
 }
