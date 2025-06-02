@@ -107,8 +107,9 @@ public class PhotoService {
         if (q != null && !q.isEmpty()) {
             String pattern = "%" + q + "%";
             Predicate titleLike = cb.like(root.get("title"), pattern);
-            Predicate descriptionLike = cb.like(root.get("tags"), pattern);
-            predicates.add(cb.or(titleLike, descriptionLike));
+            Predicate tagLike = cb.like(root.get("tags"), pattern);
+            Predicate descriptionLike = cb.like(root.get("description"), pattern);
+            predicates.add(cb.or(titleLike, tagLike,descriptionLike));
         }
 
         if (startDate != null) {

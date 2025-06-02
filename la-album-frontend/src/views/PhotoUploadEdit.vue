@@ -203,7 +203,7 @@
   import { ref, onMounted, computed } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import UploadProgress from '@/components/upload/UploadProgress.vue';
-  import { fetchAlbumList, createAlbum as createAlbumApi,createAlbumByType as createAlbumByTypeApi,fetchAlbumByType} from '@/api/album';
+  import { fetchAlbumList, createAlbum as createAlbumApi,createAlbumByType as createAlbumByTypeApi,fetchAlbumByTitle} from '@/api/album';
   import { uploadPhoto, mockUploadPhoto,copyPhotoToAlbum,updatePhotoDescriptionAndTags} from '@/api/photo';
   import { ElMessage } from 'element-plus';
   
@@ -394,6 +394,7 @@
           }
         };
         // 执行上传
+      console.log("selectedAlbumId.value",selectedAlbumId.value);
       const response= await uploadFunction(file.file, selectedAlbumId.value, uploadOptions);
       
      setTimeout(async () => {
@@ -431,13 +432,24 @@
         await copyPhotoToAlbum(photoId,newAlbumID)
         // await uploadFunction(file.file, newAlbumID, uploadOptions);
     }
+    else if(album_id == -2){
+        const responseType = await fetchAlbumByTitle('合照');
+        if (responseType.length === 0) {
+        const newAlbumID = await createAlbumByType('face','合照');
+        await copyPhotoToAlbum(photoId,newAlbumID)
+        } else {
+        console.log('找到相册:', responseType);
+        const albumId = responseType[0].id;
+        await copyPhotoToAlbum(photoId,albumId)
+        }
+    }
     else{
         console.warn('未检测到人脸');
     }
     }
     //进行其他分类
     else{
-        const responseType = await fetchAlbumByType(tag);
+        const responseType = await fetchAlbumByTitle(tag);
         // 判断返回结果是否为空数组
         if (responseType.length === 0) {
         console.log('没有找到相关类型的相册');
@@ -608,8 +620,8 @@
         clearInterval(checkAllComplete);
         
         // 统计成功和失败的数量
-        const successCount = uploadFiles.value.filter(file => file.status === 'success').length;
-        const errorCount = uploadFiles.value.filter(file => file.status === 'error').length;
+    const successCount = uploadFiles.value.filter(file => file.status === 'success').length;
+    const errorCount = uploadFiles.value.filter(file => file.status === 'error').length;
         const pendingCount = uploadFiles.value.filter(file => file.status === 'uploading').length;
         
         if (pendingCount > 0) {
@@ -617,7 +629,7 @@
           ElMessage.warning(`上传超时: ${successCount} 张成功, ${errorCount} 张失败, ${pendingCount} 张尚未完成`);
         } else if (errorCount === 0 && successCount > 0) {
           // 全部成功
-          ElMessage.success(`成功上传 ${successCount} 张照片`);
+      ElMessage.success(`成功上传 ${successCount} 张照片`);
           // 如果需要自动跳转到相册
           if (successCount === uploadFiles.value.length) {
             setTimeout(() => {
@@ -626,13 +638,13 @@
               }
             }, 1000);
           }
-        } else if (successCount > 0 && errorCount > 0) {
+    } else if (successCount > 0 && errorCount > 0) {
           // 部分成功
-          ElMessage.warning(`上传完成: ${successCount} 张成功, ${errorCount} 张失败`);
+      ElMessage.warning(`上传完成: ${successCount} 张成功, ${errorCount} 张失败`);
         } else if (errorCount > 0 && successCount === 0) {
           // 全部失败
-          ElMessage.error(`上传失败: ${errorCount} 张照片上传失败`);
-        }
+      ElMessage.error(`上传失败: ${errorCount} 张照片上传失败`);
+    }
       }
       
       // 增加已经过时间
@@ -648,8 +660,8 @@
       uploadFiles.value[fileIndex].progress = 0;
       uploadFiles.value[fileIndex].errorMessage = '上传已取消';
       ElMessage.info('已取消上传');
-    }
-  };
+  }
+};
   
   // 重试上传
   const retryUpload = (file) => {
