@@ -1,8 +1,37 @@
-# La-Album 开发者 文档
+# La-Album 开发者文档
 
-## 0. 通用说明
+## 1. 系统架构
 
-### 0.1 错误码说明
+### 1.1 核心设计原则
+
+- **RESTful API设计**: 遵循REST原则，使用标准HTTP方法（GET、POST、PUT、DELETE、PATCH）
+- **JWT认证机制**: 无状态的用户认证，支持分布式部署
+- **分层架构**: 控制器层 → 服务层 → 数据访问层
+- **模块化设计**: 各功能模块独立，便于维护和扩展
+
+### 1.2 技术栈
+
+- **认证**: JWT (JSON Web Token)
+- **数据格式**: JSON
+- **文件上传**: multipart/form-data
+- **错误处理**: 标准HTTP状态码 + 自定义错误信息
+
+### 1.3 API响应格式标准
+
+所有API响应都遵循统一的格式：
+
+```json
+{
+    "code": number,      // HTTP状态码
+    "message": string,   // 响应消息
+    "data": any         // 数据载荷，可为null
+}
+```
+
+## 2. 核心模块架构
+
+### 2.0 基础说明
+### 2.0.1 错误码说明
 | 错误码 | 说明 |
 |--------|------|
 | 200 | 请求成功 |
@@ -13,7 +42,7 @@
 | 409 | 资源冲突 |
 | 500 | 服务器内部错误 |
 
-### 0.2 JWT拦截器权限说明
+### 2.0.2 JWT拦截器权限说明
 所有需要认证的接口都需要在请求头中携带JWT token，格式为：
 ```
 Authorization: Bearer {token}
@@ -31,759 +60,249 @@ JWT token包含以下信息：
    - `/api/users/login`
 3. token验证失败时返回401错误码
 4. token过期时返回401错误码，需要重新登录
+   
 
-## 1. 用户认证模块
+### 2.1 用户管理模块 (User Management)
 
-### 1.1 用户注册
-- **URL**: `/api/users/register`
-- **Method**: `POST`
-- **Headers**: 
-  - `Content-Type: application/x-www-form-urlencoded`
-- **Request Parameters**:
-  - `username`: 用户名（5-16位非空字符）
-  - `password`: 密码（5-16位非空字符）
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": null
+#### 架构设计
+- **控制器**: `UserController.java`
+- **服务层**: `UserService.java`
+- **数据模型**: `User.java`
+- **存储库**: `UserRepository.java`
+
+#### 核心数据模型
+```java
+@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(unique = true)
+    private String username;        // 用户名（5-16位）
+    
+    @JsonIgnore
+    private String password;        // MD5加密密码
+    
+    private String email;           // 邮箱（可选）
+    private String userPic;         // 头像URL
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+    
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Album> albums;     // 用户相册
+    
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Memory> memories;  // 用户记忆视频
 }
 ```
-- **Error Codes**:
-  - 400: 参数错误（用户名或密码格式不正确）
-  - 409: 用户名已被占用
-  - 500: 服务器错误
 
-### 1.2 用户登录
-- **URL**: `/api/users/login`
-- **Method**: `POST`
-- **Headers**: 
-  - `Content-Type: application/x-www-form-urlencoded`
-- **Request Parameters**:
-  - `username`: 用户名
-  - `password`: 密码
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": "string"  // JWT token
+#### API端点实现
+
+| HTTP方法 | 路径 | 功能 | 控制器方法 | 认证要求 |
+|----------|------|------|------------|----------|
+| GET | `/api/users` | 获取所有用户 | `getAllUsers()` | 是 |
+| GET | `/api/users/{id}` | 根据ID获取用户 | `getUserById()` | 是 |
+| GET | `/api/users/username/{username}` | 根据用户名获取用户 | `getUserByUsername()` | 是 |
+| POST | `/api/users/register` | 用户注册 | `register()` | 否 |
+| POST | `/api/users/login` | 用户登录 | `login()` | 否 |
+| POST | `/api/users/logout` | 用户登出 | `logout()` | 是 |
+| GET | `/api/users/userInfo` | 获取当前用户信息 | `userInfo()` | 是 |
+| PUT | `/api/users/update` | 更新用户信息 | `update()` | 是 |
+| PATCH | `/api/users/updateAvatar` | 更新用户头像 | `updateAvatar()` | 是 |
+| DELETE | `/api/users/{id}` | 删除用户 | `deleteUser()` | 是 |
+
+#### 核心业务逻辑
+1. **用户注册流程**:
+   - 验证用户名和密码格式（5-16位非空字符）
+   - 检查用户名是否已存在
+   - 密码MD5加密存储
+   - 自动创建默认相册"全部照片"
+
+2. **用户登录流程**:
+   - 验证用户名和密码
+   - 生成JWT令牌（包含用户ID和用户名）
+   - 将令牌存储在Redis中，设置1小时过期
+   - 确保用户有默认相册
+
+3. **认证机制**:
+   - 使用JWT令牌进行身份验证
+   - 令牌信息存储在ThreadLocal中便于获取
+   - Redis存储用户会话状态
+
+### 2.2 相册管理模块 (Album Management)
+
+#### 架构设计
+- **控制器**: `AlbumController.java`
+- **服务层**: `AlbumService.java`
+- **数据模型**: `Album.java`
+- **存储库**: `AlbumRepository.java`
+
+#### 核心数据模型
+```java
+@Entity
+@Table(name = "albums")
+public class Album {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String title;           // 相册标题
+    private String description;     // 相册描述
+    private LocalDateTime createTime;
+    private String type;            // 相册类型（default/custom）
+    
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;              // 所属用户
+    
+    @OneToMany(mappedBy = "album", cascade = CascadeType.ALL)
+    private List<Photo> photos;     // 相册中的照片
 }
 ```
-- **Error Codes**:
-  - 400: 参数错误
-  - 401: 用户名或密码错误
-  - 500: 服务器错误
 
-### 1.3 用户登出
-- **URL**: `/api/users/logout`
-- **Method**: `POST`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": null
+#### API端点实现
+
+| HTTP方法 | 路径 | 功能 | 控制器方法 | 权限检查 |
+|----------|------|------|------------|----------|
+| GET | `/api/albums` | 获取所有相册 | `getAllAlbums()` | 用户自己的相册 |
+| GET | `/api/albums/type/{type}` | 按类型获取相册 | `getAllAlbumsByType()` | 用户自己的相册 |
+| POST | `/api/albums` | 创建相册 | `createAlbum()` | 认证用户 |
+| POST | `/api/albums/type` | 创建系统相册 | `createAlbumByType()` | 认证用户 |
+| GET | `/api/albums/{id}` | 获取指定相册 | `getAlbumById()` | 相册所有者 |
+| PUT | `/api/albums/{id}` | 更新相册信息 | `updateAlbum()` | 相册所有者 |
+| GET | `/api/albums/{albumId}/photos` | 获取相册照片 | `getPhotosInAlbum()` | 相册所有者 |
+| DELETE | `/api/albums/{id}` | 删除相册 | `deleteAlbum()` | 相册所有者 |
+
+### 2.3 照片管理模块 (Photo Management)
+
+#### 架构设计
+- **控制器**: `PhotoController.java`
+- **服务层**: `PhotoService.java`
+- **数据模型**: `Photo.java`、`PhotoDTO.java`
+- **存储库**: `PhotoRepository.java`
+
+#### 核心数据模型
+```java
+@Entity
+@Table(name = "photos")
+public class Photo {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String title;           // 照片标题
+    private String url;             // OSS存储URL
+    private String description;     // 照片描述
+    private String location;        // 拍摄地点
+    private String tags;            // 照片标签
+    private LocalDate date;         // 拍摄日期
+    private LocalDateTime uploadTime; // 上传时间
+    
+    @ManyToOne
+    @JoinColumn(name = "album_id")
+    private Album album;            // 所属相册
 }
 ```
-- **Error Codes**:
-  - 401: 未授权
-  - 500: 服务器错误
 
-### 1.4 获取当前用户信息
-- **URL**: `/api/users/userInfo`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": {
-        "id": "number",
-        "username": "string",
-        "userPic": "string"  // 用户头像URL
-    }
+#### API端点实现
+
+| HTTP方法 | 路径 | 功能 | 控制器方法 | 特殊要求 |
+|----------|------|------|------------|----------|
+| GET | `/api/photos` | 获取所有照片 | `getAllPhotos()` | 返回DTO，包含签名URL |
+| GET | `/api/photos/{id}` | 获取照片详情 | `getPhoto()` | 返回DTO，签名URL |
+| POST | `/api/photos/upload` | 上传照片 | `uploadPhoto()` | multipart/form-data |
+| POST | `/api/photos/copy` | 复制照片到相册 | `copyPhotoToAlbum()` | 权限验证 |
+| DELETE | `/api/photos/{id}` | 删除照片 | `deletePhoto()` | 移至回收站 |
+| PUT | `/api/photos/{id}/move` | 移动照片 | `movePhoto()` | 权限验证 |
+| GET | `/api/photos/search` | 搜索照片 | `searchPhotos()` | 支持多条件搜索 |
+| PUT | `/api/photos/{id}` | 更新照片信息 | `updatePhotoDescriptionAndTags()` | 权限验证 |
+| GET | `/api/photos/proxy` | 图片代理访问 | `proxyImage()` | 安全访问 |
+
+### 2.4 图片编辑模块 (Image Editing)
+
+#### 架构设计
+- **控制器**: `ImageEditController.java`
+- **工具类**: `ImageEditUtils.java`
+- **存储配置**: 本地静态文件存储
+
+#### 支持的编辑操作
+```java
+public class ImageEditUtils {
+    // 基础调整
+    public static BufferedImage adjustBrightness(BufferedImage image, int brightness);
+    public static BufferedImage adjustContrast(BufferedImage image, double contrast);
+    public static BufferedImage adjustSaturation(BufferedImage image, float saturation);
+    
+    // 几何变换
+    public static BufferedImage rotateImage(BufferedImage image, int degrees);
+    public static BufferedImage cropImage(BufferedImage image, int x, int y, int width, int height);
+    
+    // 滤镜效果
+    public static BufferedImage applyGrayscaleFilter(BufferedImage image);
+    public static BufferedImage applySepiaFilter(BufferedImage image);  // vintage
+    public static BufferedImage applyWarmFilter(BufferedImage image);
+    public static BufferedImage applyCoolFilter(BufferedImage image);
+    public static BufferedImage applyDramaticFilter(BufferedImage image);
+    public static BufferedImage applyFadeFilter(BufferedImage image);
+    public static BufferedImage applyMutedFilter(BufferedImage image);
 }
 ```
-- **Error Codes**:
-  - 401: 未授权
-  - 500: 服务器错误
 
-### 1.5 更新用户信息
-- **URL**: `/api/users/update`
-- **Method**: `PUT`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "username": "string",  // 可选
-    "password": "string",  // 可选
-    "userPic": "string"    // 可选
+#### API端点实现
+
+| HTTP方法 | 路径 | 功能 | 控制器方法 | 特点 |
+|----------|------|------|------------|------|
+| GET | `/api/image-edit/{id}` | 获取照片信息 | `getPhoto()` | 编辑前准备 |
+| POST | `/api/image-edit/edit` | 综合编辑 | `editImage()` | 预览模式，支持多种操作组合 |
+| POST | `/api/image-edit/crop` | 裁剪预览 | `cropImage()` | 非破坏性预览 |
+| POST | `/api/image-edit/save` | 保存编辑 | `saveImage()` | 生成最终版本 |
+| PUT | `/api/image-edit/{id}/adjust` | 基础调整 | `adjustImage()` | 直接保存到数据库 |
+| PUT | `/api/image-edit/{id}/filter` | 应用滤镜 | `applyFilter()` | 直接保存到数据库 |
+| PUT | `/api/image-edit/{id}/transform` | 几何变换 | `transformImage()` | 直接保存到数据库 |
+| PUT | `/api/image-edit/{id}/crop` | 裁剪照片 | `cropImage()` | 直接保存到数据库 |
+
+### 2.5 回收站模块 (Trash Management)
+
+#### 架构设计
+- **控制器**: `TrashedPhotoController.java`
+- **服务层**: `TrashedPhotoService.java`
+- **数据模型**: `TrashedPhoto.java`
+- **存储库**: `TrashedPhotoRepository.java`
+
+#### 核心数据模型
+```java
+@Entity
+@Table(name = "trashed_photos")
+public class TrashedPhoto {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String title;           // 照片标题
+    private String url;             // 照片URL
+    private String description;     // 照片描述
+    private LocalDateTime deletedAt; // 删除时间
+    private Long originalAlbumId;   // 原始相册ID
+    private String originalAlbumName; // 原始相册名称
+    private Long userId;            // 用户ID
 }
 ```
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": null
-}
-```
-- **Error Codes**:
-  - 400: 参数错误
-  - 401: 未授权
-  - 409: 用户名已存在
-  - 500: 服务器错误
 
-### 1.6 更新用户头像
-- **URL**: `/api/users/updateAvatar`
-- **Method**: `PATCH`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/x-www-form-urlencoded`
-- **Request Parameters**:
-  - `avatarUrl`: 头像URL
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": null
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 404: 用户不存在
-  - 500: 服务器错误
+#### API端点实现
 
-## 2. 相册管理模块
+| HTTP方法 | 路径 | 功能 | 控制器方法 | 备注 |
+|----------|------|------|------------|------|
+| GET | `/api/trash` | 获取回收站照片 | `getTrashPhotos()` | 按用户隔离 |
+| POST | `/api/trash/restore/{id}` | 恢复照片 | `restorePhoto()` | 恢复到原相册 |
+| DELETE | `/api/trash/{id}` | 永久删除 | `deleteFromTrash()` | 同时删除OSS文件 |
 
-### 2.1 获取所有相册
-- **URL**: `/api/albums`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": [
-        {
-            "id": "number",
-            "name": "string",
-            "description": "string",
-            "createTime": "string",
-            "updateTime": "string",
-            "user": {
-                "id": "number",
-                "username": "string"
-            }
-        }
-    ]
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 500: 服务器错误
+## 3. 前端视图和组件说明
 
-### 2.2 创建相册
-- **URL**: `/api/albums`
-- **Method**: `POST`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "name": "string",        // 相册名称
-    "description": "string"  // 相册描述（可选）
-}
-```
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": {
-        "id": "number",
-        "name": "string",
-        "description": "string",
-        "createTime": "string",
-        "updateTime": "string",
-        "user": {
-            "id": "number",
-            "username": "string"
-        }
-    }
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 500: 服务器错误
+### 3.1 视图（Views）
 
-### 2.3 获取单个相册
-- **URL**: `/api/albums/{id}`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": {
-        "id": "number",
-        "name": "string",
-        "description": "string",
-        "createTime": "string",
-        "updateTime": "string",
-        "user": {
-            "id": "number",
-            "username": "string"
-        }
-    }
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 403: 无权访问
-  - 404: 相册不存在
-  - 500: 服务器错误
-
-### 2.4 更新相册
-- **URL**: `/api/albums/{id}`
-- **Method**: `PUT`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "name": "string",        // 可选
-    "description": "string"  // 可选
-}
-```
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": {
-        "id": "number",
-        "name": "string",
-        "description": "string",
-        "createTime": "string",
-        "updateTime": "string",
-        "user": {
-            "id": "number",
-            "username": "string"
-        }
-    }
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 403: 无权修改
-  - 404: 相册不存在
-  - 500: 服务器错误
-
-### 2.5 删除相册
-- **URL**: `/api/albums/{id}`
-- **Method**: `DELETE`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": "相册已删除，照片已移至垃圾桶"
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 403: 无权删除
-  - 404: 相册不存在
-  - 500: 服务器错误
-
-### 2.6 获取相册中的照片
-- **URL**: `/api/albums/{albumId}/photos`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": [
-        {
-            "id": "number",
-            "name": "string",
-            "url": "string",      // 带签名的URL
-            "description": "string",
-            "createTime": "string",
-            "updateTime": "string"
-        }
-    ]
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 403: 无权访问
-  - 404: 相册不存在
-  - 500: 服务器错误
-
-## 3. 照片管理模块
-
-### 3.1 获取所有照片
-- **URL**: `/api/photo`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-[
-    {
-        "id": "number",
-        "title": "string",
-        "url": "string",      // 带签名的URL
-        "album": {
-            "id": "number",
-            "name": "string"
-        }
-    }
-]
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 500: 服务器错误
-
-### 3.2 获取照片详情
-- **URL**: `/api/photo/{id}`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-{
-    "id": "number",
-    "title": "string",
-    "url": "string",      // 带签名的URL
-    "album": {
-        "id": "number",
-        "name": "string"
-    }
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 404: 照片不存在
-  - 500: 服务器错误
-
-### 3.3 上传照片
-- **URL**: `/api/photo/upload`
-- **Method**: `POST`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: multipart/form-data`
-- **Request Parameters**:
-  - `file`: 图片文件（jpg, png, gif，最大10MB）
-  - `albumId`: 相册ID
-- **Response**:
-```json
-{
-    "id": "number",
-    "title": "string",
-    "url": "string",
-    "album": {
-        "id": "number",
-        "name": "string"
-    }
-}
-```
-- **Error Codes**:
-  - 400: 参数错误（文件为空、文件太大、不支持的文件类型）
-  - 401: 未授权
-  - 500: 服务器错误
-
-### 3.4 删除照片
-- **URL**: `/api/photo/{id}`
-- **Method**: `DELETE`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-  - 状态码：204 No Content
-- **Error Codes**:
-  - 401: 未授权
-  - 404: 照片不存在
-  - 500: 服务器错误
-
-### 3.5 移动照片到新相册
-- **URL**: `/api/photo/{id}/move`
-- **Method**: `PUT`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "id": "number"  // 目标相册ID
-}
-```
-- **Response**:
-  - 状态码：200 OK
-- **Error Codes**:
-  - 401: 未授权
-  - 404: 照片或相册不存在
-  - 500: 服务器错误
-
-### 3.6 搜索照片
-- **URL**: `/api/photos/search`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Query Parameters**:
-  - `keyword`: 搜索关键词
-  - `albumId`: 相册ID（可选）
-  - `page`: 页码（默认1）
-  - `size`: 每页数量（默认10）
-- **Response**:
-```json
-{
-    "code": 200,
-    "message": "success",
-    "data": {
-        "total": "number",
-        "list": [
-            {
-                "id": "number",
-                "name": "string",
-                "url": "string",      // 带签名的URL
-                "description": "string",
-                "createTime": "string",
-                "updateTime": "string",
-                "album": {
-                    "id": "number",
-                    "name": "string"
-                }
-            }
-        ]
-    }
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 500: 服务器错误
-
-## 4. 回收站管理模块
-
-### 4.1 获取回收站中的照片
-- **URL**: `/api/trash/{trashBinId}/photos`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-[
-    {
-        "id": "number",
-        "title": "string",
-        "url": "string",
-        "deleteTime": "string",
-        "originalAlbum": {
-            "id": "number",
-            "name": "string"
-        }
-    }
-]
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 404: 回收站不存在
-  - 500: 服务器错误
-
-### 4.2 还原照片
-- **URL**: `/api/trash/restore/{id}`
-- **Method**: `POST`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-{
-    "id": "number",
-    "title": "string",
-    "url": "string",
-    "album": {
-        "id": "number",
-        "name": "string"
-    }
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 404: 照片不存在
-  - 500: 服务器错误
-
-### 4.3 永久删除照片
-- **URL**: `/api/trash/{id}`
-- **Method**: `DELETE`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-  - 状态码：204 No Content
-- **Error Codes**:
-  - 401: 未授权
-  - 404: 照片不存在
-  - 500: 服务器错误
-
-
-## 5. 图片编辑模块
-
-### 5.1 获取照片信息
-- **URL**: `/api/image-edit/{id}`
-- **Method**: `GET`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-- **Response**:
-```json
-{
-    "id": "number",
-    "title": "string",
-    "url": "string",
-    "album": {
-        "id": "number",
-        "name": "string"
-    }
-}
-```
-- **Error Codes**:
-  - 401: 未授权
-  - 404: 照片不存在
-  - 500: 服务器错误
-
-### 5.2 综合编辑照片
-- **URL**: `/api/image-edit/edit`
-- **Method**: `POST`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "imageUrl": "string",
-    "edits": {
-        "brightness": "number",    // 可选，亮度调整（-100到100）
-        "contrast": "number",      // 可选，对比度调整（0到2）
-        "saturation": "number",    // 可选，饱和度调整（0到2）
-        "rotation": "number",      // 可选，旋转角度（0, 90, 180, 270）
-        "filter": "string"         // 可选，滤镜类型（grayscale, vintage, warm, cool, dramatic, fade, muted）
-    }
-}
-```
-- **Response**:
-```json
-{
-    "editedImageUrl": "string"  // 编辑后的预览图片URL
-}
-```
-- **Error Codes**:
-  - 400: 参数错误
-  - 401: 未授权
-  - 500: 服务器错误
-
-### 5.3 裁剪照片
-- **URL**: `/api/image-edit/crop`
-- **Method**: `POST`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "imageUrl": "string",
-    "cropData": {
-        "x": "number",      // 裁剪起始X坐标
-        "y": "number",      // 裁剪起始Y坐标
-        "width": "number",  // 裁剪宽度
-        "height": "number"  // 裁剪高度
-    }
-}
-```
-- **Response**:
-```json
-{
-    "editedImageUrl": "string"  // 裁剪后的预览图片URL
-}
-```
-- **Error Codes**:
-  - 400: 参数错误
-  - 401: 未授权
-  - 500: 服务器错误
-
-### 5.4 保存编辑后的照片
-- **URL**: `/api/image-edit/save`
-- **Method**: `POST`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "imageUrl": "string",      // 原始图片URL
-    "editedImageUrl": "string" // 编辑后的预览图片URL
-}
-```
-- **Response**:
-```json
-{
-    "savedImageUrl": "string"  // 保存后的最终图片URL
-}
-```
-- **Error Codes**:
-  - 400: 参数错误
-  - 401: 未授权
-  - 500: 服务器错误
-
-### 5.5 基本调整
-- **URL**: `/api/image-edit/{id}/adjust`
-- **Method**: `PUT`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "brightness": "number",    // 可选，亮度调整（-100到100）
-    "contrast": "number",      // 可选，对比度调整（0到2）
-    "saturation": "number"     // 可选，饱和度调整（0到2）
-}
-```
-- **Response**:
-```json
-{
-    "id": "number",
-    "title": "string",
-    "url": "string",      // 调整后的图片URL
-    "album": {
-        "id": "number",
-        "name": "string"
-    }
-}
-```
-- **Error Codes**:
-  - 400: 参数错误
-  - 401: 未授权
-  - 404: 照片不存在
-  - 500: 服务器错误
-
-### 5.6 滤镜
-- **URL**: `/api/image-edit/{id}/filter`
-- **Method**: `PUT`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "filter": "string"  // 滤镜类型（grayscale, vintage, warm, cool, dramatic, fade, muted）
-}
-```
-- **Response**:
-```json
-{
-    "id": "number",
-    "title": "string",
-    "url": "string",      // 应用滤镜后的图片URL
-    "album": {
-        "id": "number",
-        "name": "string"
-    }
-}
-```
-- **Error Codes**:
-  - 400: 参数错误
-  - 401: 未授权
-  - 404: 照片不存在
-  - 500: 服务器错误
-
-### 5.7 应用变换
-- **URL**: `/api/image-edit/{id}/transform`
-- **Method**: `PUT`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "rotation": "number",    // 可选，旋转角度（0, 90, 180, 270）
-    "flip": "string"         // 可选，翻转方向（horizontal, vertical）
-}
-```
-- **Response**:
-```json
-{
-    "id": "number",
-    "title": "string",
-    "url": "string",      // 变换后的图片URL
-    "album": {
-        "id": "number",
-        "name": "string"
-    }
-}
-```
-- **Error Codes**:
-  - 400: 参数错误
-  - 401: 未授权
-  - 404: 照片不存在
-  - 500: 服务器错误
-
-### 5.8 裁剪照片（直接保存）
-- **URL**: `/api/image-edit/{id}/crop`
-- **Method**: `PUT`
-- **Headers**: 
-  - `Authorization: Bearer {token}`
-  - `Content-Type: application/json`
-- **Request Body**:
-```json
-{
-    "x": "number",      // 裁剪起始X坐标
-    "y": "number",      // 裁剪起始Y坐标
-    "width": "number",  // 裁剪宽度
-    "height": "number"  // 裁剪高度
-}
-```
-- **Response**:
-```json
-{
-    "id": "number",
-    "title": "string",
-    "url": "string",      // 裁剪后的图片URL
-    "album": {
-        "id": "number",
-        "name": "string"
-    }
-}
-```
-- **Error Codes**:
-  - 400: 参数错误
-  - 401: 未授权
-  - 404: 照片不存在
-  - 500: 服务器错误
-
-## 6. 前端视图和组件说明
-
-### 6.1 视图（Views）
-
-#### 6.1.1 用户认证相关
+#### 3.1.1 用户认证相关
 - **LoginView.vue**: 用户登录页面
   - 功能：用户登录表单
   - 路由：`/login`
@@ -794,7 +313,7 @@ JWT token包含以下信息：
   - 路由：`/register`
   - 依赖组件：无
 
-#### 6.1.2 相册管理相关
+#### 3.1.2 相册管理相关
 - **AlbumListView.vue**: 相册列表页面
   - 功能：展示所有相册，支持创建、编辑、删除相册
   - 路由：`/albums`
@@ -805,7 +324,7 @@ JWT token包含以下信息：
   - 路由：`/album/:id`
   - 依赖组件：`photo/PhotoGrid.vue`
 
-#### 6.1.3 照片管理相关
+#### 3.1.3 照片管理相关
 - **PhotoView.vue**: 照片查看页面
   - 功能：展示单张照片详情，支持编辑、删除等操作
   - 路由：`/photo/:id`
@@ -816,63 +335,21 @@ JWT token包含以下信息：
   - 路由：`/upload`
   - 依赖组件：`upload/UploadForm.vue`, `ImageEditor.vue`
 
-- **EditPhoto.vue**: 照片编辑页面
-  - 功能：照片编辑、滤镜应用、裁剪等
-  - 路由：`/edit/:id`
-  - 依赖组件：`ImageEditor.vue`
+### 3.2 组件（Components）
 
-#### 6.1.4 记忆管理相关
-- **MemoryListView.vue**: 记忆列表页面
-  - 功能：展示所有记忆，支持创建、编辑、删除记忆
-  - 路由：`/memories`
-  - 依赖组件：`memory/MemoryCard.vue`
-
-- **MemoryView.vue**: 记忆详情页面
-  - 功能：展示记忆详情，包含照片和描述
-  - 路由：`/memory/:id`
-  - 依赖组件：`photo/PhotoGrid.vue`
-
-- **EditMemoryView.vue**: 记忆编辑页面
-  - 功能：编辑记忆内容，添加/删除照片
-  - 路由：`/memory/edit/:id`
-  - 依赖组件：`memory/MemoryForm.vue`
-
-#### 6.1.5 其他功能页面
-- **SearchView.vue**: 搜索页面
-  - 功能：搜索照片和相册
-  - 路由：`/search`
-  - 依赖组件：`photo/PhotoGrid.vue`
-
-- **TrashBin.vue**: 回收站页面
-  - 功能：管理已删除的照片
-  - 路由：`/trash`
-  - 依赖组件：`photo/PhotoGrid.vue`
-
-- **StyleTransferPage.vue**: 风格迁移页面
-  - 功能：照片风格迁移
-  - 路由：`/style-transfer`
-  - 依赖组件：`ImageEditor.vue`
-
-- **SharePhoto.vue**: 照片分享页面
-  - 功能：生成照片分享链接
-  - 路由：`/share/:id`
-  - 依赖组件：无
-
-### 6.2 组件（Components）
-
-#### 6.2.1 布局组件（layout/）
+#### 3.2.1 布局组件（layout/）
 - **Header.vue**: 页面头部导航
 - **Sidebar.vue**: 侧边栏导航
 - **Footer.vue**: 页面底部
 
-#### 6.2.2 相册组件（album/）
+#### 3.2.2 相册组件（album/）
 - **AlbumCard.vue**: 相册卡片组件
   - 功能：展示相册预览信息
   - 属性：
     - `album`: 相册数据对象
     - `editable`: 是否可编辑
 
-#### 6.2.3 照片组件（photo/）
+#### 3.2.3 照片组件（photo/）
 - **PhotoGrid.vue**: 照片网格组件
   - 功能：网格形式展示照片
   - 属性：
@@ -886,152 +363,49 @@ JWT token包含以下信息：
     - `photo`: 照片数据对象
     - `selectable`: 是否可选择
 
-#### 6.2.4 记忆组件（memory/）
-- **MemoryCard.vue**: 记忆卡片组件
-  - 功能：展示记忆预览
-  - 属性：
-    - `memory`: 记忆数据对象
-    - `editable`: 是否可编辑
+## 4. 数据库设计指南
 
-- **MemoryForm.vue**: 记忆表单组件
-  - 功能：创建/编辑记忆
-  - 属性：
-    - `memory`: 记忆数据对象（可选）
-    - `mode`: 模式（create/edit）
+### 4.1 核心实体关系
 
-#### 6.2.5 上传组件（upload/）
-- **UploadForm.vue**: 上传表单组件
-  - 功能：处理照片上传
-  - 属性：
-    - `albumId`: 目标相册ID
-    - `multiple`: 是否支持多文件上传
+```sql
+-- 用户表
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(16) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    user_pic VARCHAR(500),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-#### 6.2.6 UI组件（ui/）
-- **Button.vue**: 自定义按钮组件
-- **Input.vue**: 自定义输入框组件
-- **Modal.vue**: 模态框组件
-- **Loading.vue**: 加载状态组件
-- **Toast.vue**: 提示消息组件
+-- 相册表
+CREATE TABLE albums (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    user_id INTEGER REFERENCES users(id),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### 6.3 组件通信
-1. **Props传递**：父组件向子组件传递数据
-2. **事件发射**：子组件通过`$emit`向父组件发送事件
-3. **Vuex状态管理**：
-   - `user`: 用户信息
-   - `albums`: 相册列表
-   - `photos`: 照片列表
-   - `memories`: 记忆列表
-   - `ui`: UI状态（加载、提示等）
+-- 照片表
+CREATE TABLE photos (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(200),
+    url VARCHAR(500) NOT NULL,
+    description TEXT,
+    album_id INTEGER REFERENCES albums(id),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### 6.4 路由配置
-所有路由都在`router/index.js`中配置，主要路由包括：
-- `/`: 首页
-- `/login`: 登录
-- `/register`: 注册
-- `/albums`: 相册列表
-- `/album/:id`: 相册详情
-- `/photo/:id`: 照片详情
-- `/upload`: 照片上传
-- `/edit/:id`: 照片编辑
-- `/memories`: 记忆列表
-- `/memory/:id`: 记忆详情
-- `/memory/edit/:id`: 记忆编辑
-- `/search`: 搜索
-- `/trash`: 回收站
-- `/style-transfer`: 风格迁移
-- `/share/:id`: 照片分享 
-
-### 6.5 前端配置说明
-
-#### 6.5.1 环境变量配置
-在项目根目录创建以下环境变量文件：
-
-1. **开发环境** (.env.development)
+-- 回收站表
+CREATE TABLE trash_items (
+    id SERIAL PRIMARY KEY,
+    photo_id INTEGER REFERENCES photos(id),
+    user_id INTEGER REFERENCES users(id),
+    original_album_id INTEGER REFERENCES albums(id),
+    delete_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
-VUE_APP_BASE_API=http://localhost:8080/api
-VUE_APP_UPLOAD_URL=http://localhost:8080/api/upload
-VUE_APP_STYLE_TRANSFER_URL=http://localhost:8080/api/style-transfer
-```
-
-
-#### 6.5.2 API配置
-在`src/api/config.js`中配置API请求：
-
-```javascript
-import axios from 'axios'
-
-// 创建axios实例
-const service = axios.create({
-  baseURL: process.env.VUE_APP_BASE_API,
-  timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-})
-
-// 请求拦截器
-service.interceptors.request.use(
-  config => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`
-    }
-    return config
-  },
-  error => {
-    return Promise.reject(error)
-  }
-)
-
-// 响应拦截器
-service.interceptors.response.use(
-  response => {
-    const res = response.data
-    if (res.code !== 200) {
-      // 处理错误
-      return Promise.reject(new Error(res.message || 'Error'))
-    }
-    return res
-  },
-  error => {
-    // 处理错误
-    return Promise.reject(error)
-  }
-)
-
-export default service
-```
-
-
-#### 6.5.5 请求工具
-在`src/utils\request`目录下配置常用工具函数：
-
-主要功能说明：
-1. **基础配置**
-   - 设置基础URL为 `http://localhost:9090/api`
-   - 设置请求超时时间为15秒
-
-2. **请求拦截器**
-   - 自动从 localStorage 获取 token
-   - 将 token 添加到请求头中
-   - 添加请求调试日志
-
-3. **响应拦截器**
-   - 处理响应数据格式
-   - 处理业务错误码（code）
-   - 处理 HTTP 状态码错误
-   - 统一的错误提示
-   - 自动处理登录失效情况
-
-4. **错误处理**
-   - 401：未授权，自动跳转登录页
-   - 403：权限不足
-   - 404：接口不存在
-   - 500：服务器错误
-   - 网络错误处理
-   - 请求配置错误处理
-
-
-
-
 
