@@ -211,7 +211,8 @@
           const photoID = await uploadRes.json();
 
           // 2. 获取默认相册ID
-          const defaultAlbumId = this.getDefaultAlbumId();
+          const defaultAlbumId = await this.getDefaultAlbumId();
+          console.log("默认相册ID",defaultAlbumId);
 
           // 3. 若不是上传到默认相册，则复制
           if (albumId !== defaultAlbumId) {
@@ -228,6 +229,8 @@
           } else {
             console.log('找到相册:', responseType);
             const editAlbumId = responseType[0].id;
+            console.log("photoID is ",photoID);
+            console.log("editAlumID is",editAlbumId);
             await copyPhotoToAlbum(photoID, editAlbumId);
           }
 
