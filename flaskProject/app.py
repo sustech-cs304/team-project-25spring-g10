@@ -147,6 +147,19 @@ def auto_class():
         data = response2.json()
         url = data.get('url')
         print("url",url)
+        
+        image_response = requests.get(url)
+
+        image = Image.open(io.BytesIO(image_response.content)).convert('RGB')
+
+        # Detect faces
+        x_aligned, probs = mtcnn(image,return_prob=True)
+        
+        if x_aligned is not None:
+            if len(x_aligned )>2:
+                print('检测到多个人脸,是一张合照')
+                return jsonify({"albumId": -2}), 200
+           
 
         albums = response.json().get('data',[])
         
@@ -189,11 +202,10 @@ def auto_class():
             x_aligned, probs = mtcnn(image,return_prob=True)
            
             if x_aligned is not None:
-                if len(x_aligned)>1:
-                    print('检测到多个人脸,是一张合照')
-                    return jsonify({"albumId": -2}), 200
-                print(f'检测到的人脸及其概率: {probs}')  # 简单打印
-                aligned.append(x_aligned[0])
+                if len(x_aligned )>2:
+                    continue
+                else:
+                    aligned.append(x_aligned[0])
             else:
                 #未检测出人脸
                 print('未检测出人脸')

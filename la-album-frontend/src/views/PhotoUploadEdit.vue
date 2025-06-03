@@ -572,9 +572,9 @@
     }
   };
 
-  
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   // 上传所有文件
-  const uploadAllFiles = () => {
+  const uploadAllFiles = async() => {
     if (!selectedAlbumId.value) {
       ElMessage.warning('请先选择相册');
       return;
@@ -599,10 +599,10 @@
     ElMessage.info(`开始上传 ${filesToUpload.length} 张照片...`);
     
     // 开始上传所有文件
-    filesToUpload.forEach(file => {
-      // 调用上传函数
-      uploadFile(file);
-    });
+    for (const file of filesToUpload) {
+       uploadFile(file);
+       await delay(1000); // 上传完一张等待 1 秒
+   }
     
     // 等待所有上传完成并显示结果
     const checkInterval = 500; // 检查间隔，毫秒
